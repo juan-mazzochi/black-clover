@@ -367,6 +367,17 @@
       B(20, hy - 6, 21, hy - 2, '#d8dde3', { light: 0.6, bottom: false });
       S(20, hy - 7, '#ffffff');
       R(19, hy - 1, 22, hy - 1, gold);
+    } else if (wpn === 'bow') {
+      // arco largo con cuerda y flecha
+      for (let y = 6; y <= 30; y++) {
+        const x = 21 + Math.round(Math.sin(((y - 6) / 24) * Math.PI) * 3);
+        R(x, y, x, y, '#8a5a2a');
+        if (y % 4 === 0) S(x, y, '#a87038');
+      }
+      R(21, 6, 21, 30, '#e8e0d0');
+      R(17, hy - 1, 24, hy - 1, '#c8a070');
+      S(25, hy - 1, '#d8dde3');
+      S(17, hy - 2, '#c03030');
     } else if (wpn === 'claws') {
       for (const x0 of [4, 17]) for (let i = 0; i < 3; i++) R(x0 + i, 22, x0 + i, 23 + (i % 2), '#f2f2f2');
     }

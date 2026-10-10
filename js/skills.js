@@ -42,7 +42,7 @@
         const ang = Math.atan2(t.y - p.y, t.x - p.x);
         const half = ((s.arc / 2) * Math.PI) / 180;
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning) continue;
+          if (e.dead || e.untargetable) continue;
           const d = U.dist(p.x, p.y, e.x, e.y);
           if (d > s.range + e.r) continue;
           const a = Math.atan2(e.y - p.y, e.x - p.x);
@@ -73,7 +73,7 @@
         const x2 = p.x + Math.cos(ang) * s.range;
         const y2 = p.y + Math.sin(ang) * s.range;
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning) continue;
+          if (e.dead || e.untargetable) continue;
           if (U.segDist(e.x, e.y, p.x, p.y, x2, y2) < s.width / 2 + e.r) g.hitEnemy(e, s.damage, { knockback: 200, fromX: p.x, fromY: p.y, source: def.name });
         }
         if (!s.noAntimagic) {
@@ -176,7 +176,7 @@
         let best = null;
         let bestN = 0;
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning) continue;
+          if (e.dead || e.untargetable) continue;
           if (U.dist2(p.x, p.y, e.x, e.y) > s.range * s.range) continue;
           let n = 0;
           for (const o of g.room.enemies) if (!o.dead && U.dist2(e.x, e.y, o.x, o.y) < s.radius * s.radius) n++;
@@ -232,7 +232,7 @@
           const oy = p.y + Math.sin(a) * s.orbitRadius;
           st.points.push({ x: ox, y: oy });
           for (const e of g.room.enemies) {
-            if (e.dead || e.spawning || e.orbitCd > 0) continue;
+            if (e.dead || e.untargetable || e.orbitCd > 0) continue;
             if (U.dist2(ox, oy, e.x, e.y) < (s.radius + e.r) ** 2) {
               e.orbitCd = s.hitCooldown;
               g.hitEnemy(e, s.damage, { knockback: 90, fromX: p.x, fromY: p.y, source: 'escudoViento' });
@@ -314,7 +314,7 @@
       if (st.t > 0) return;
       st.t = s.tickRate;
       for (const e of g.room.enemies) {
-        if (e.dead) continue;
+        if (e.dead || e.untargetable) continue;
         if (U.dist2(p.x, p.y, e.x, e.y) < (s.radius + e.r) ** 2) g.hitEnemy(e, s.damage, { noCrit: true, source: def.name, poison: s.poison, burn: s.burn });
       }
     },
@@ -428,7 +428,7 @@
       activate(g, p) {
         const b = p.ch.ultimate.burst;
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning) continue;
+          if (e.dead || e.untargetable) continue;
           if (U.dist2(p.x, p.y, e.x, e.y) < (b.radius + e.r) ** 2) g.hitEnemy(e, b.damage, { knockback: 250, fromX: p.x, fromY: p.y, source: 'sylph' });
         }
         g.addEffect({ type: 'ring', x: p.x, y: p.y, r0: 20, r1: b.radius, life: 0.6, color: '#7fe0c8', width: 12 });
@@ -459,7 +459,7 @@
       update(g, p) {
         const u = p.ch.ultimate;
         for (const e of g.room.enemies) {
-          if (e.dead) continue;
+          if (e.dead || e.untargetable) continue;
           if (U.dist2(p.x, p.y, e.x, e.y) < (u.slowRadius + e.r) ** 2) {
             e.slowT = 0.15;
             e.slowAmt = Math.max(e.slowAmt || 0, u.slow);

@@ -52,7 +52,9 @@
       evolution: { max: 2, damageMult: 1.6, cooldownMult: 0.8, sizeMult: 1.2, extraCount: 1 },
       // EXPERIENCIA: los enemigos dan XP; cada nivel pide más que el anterior
       //  XP para pasar del nivel N al N+1 = base * growth^(N-1)
-      xp: { base: 22, growth: 1.28, perCost: 3, elite: 25, boss: 60 },
+      xp: { base: 30, growth: 1.33, perCost: 3, elite: 25, boss: 60 },
+      // balas de los enemigos: multiplicador de velocidad (1 = la del enemigo en esta lista)
+      enemyProjectileSpeed: 1.35,
     },
 
     // ---------------------------------------------------------
@@ -86,9 +88,9 @@
           name: 'Modo Demonio',
           desc: 'Con la barra llena, apretá Q: +60% de daño, +25% de velocidad, -25% de enfriamientos y un poco de robo de vida. Riesgo: drena 2% de tu vida por segundo y al terminar quedás agotado 2 s.',
           gaugeMax: 100,
-          gainPerHpLost: 1.0,
-          gainPerDamageDealt: 0.02,
-          gainPerAntimagic: 3,
+          gainPerHpLost: 0.55,
+          gainPerDamageDealt: 0.008,
+          gainPerAntimagic: 1.5,
           duration: 8,
           mods: { damagePct: 0.6, speedPct: 0.25, cooldownPct: 0.25, lifesteal: 0.006 },
           drainPctPerSec: 0.02,
@@ -131,8 +133,8 @@
           name: 'Sylph, Espíritu del Viento',
           desc: 'Con la barra llena, apretá Q: una tormenta daña a todos los enemigos cercanos; durante 9 s tus hechizos no cuestan maná, se recargan 40% más rápido y hacen +35% de daño.',
           gaugeMax: 100,
-          gainPerManaSpent: 0.35,
-          gainPerDamageDealt: 0.012,
+          gainPerManaSpent: 0.22,
+          gainPerDamageDealt: 0.008,
           duration: 9,
           mods: { cooldownPct: 0.4, damagePct: 0.35, speedPct: 0.2 },
           freeMana: true,
@@ -175,8 +177,8 @@
           name: 'Armadura Valquiria',
           desc: 'Con la barra llena, apretá Q: +50% de daño, +6 de armadura y el doble de regeneración de maná. Tus balas de agua se vuelven lanzas que atraviesan.',
           gaugeMax: 100,
-          gainPerSecHighMana: 3.5,
-          gainPerDamageDealt: 0.015,
+          gainPerSecHighMana: 2.2,
+          gainPerDamageDealt: 0.009,
           duration: 9,
           mods: { damagePct: 0.5, armor: 6, manaRegenPct: 1.0 },
           empowerBasic: { pierce: 3, damagePct: 0.5 },
@@ -225,8 +227,8 @@
           name: 'Zona de Maná',
           desc: 'Con la barra llena, apretá Q: durante 8 s controlás el maná del ambiente: +40% de daño, -35% de enfriamientos, el triple de regeneración de maná y los enemigos cercanos se frenan.',
           gaugeMax: 100,
-          gainPerManaSpent: 0.25,
-          gainPerDamageDealt: 0.015,
+          gainPerManaSpent: 0.16,
+          gainPerDamageDealt: 0.009,
           duration: 8,
           mods: { damagePct: 0.4, cooldownPct: 0.35, manaRegenPct: 2.0 },
           slowRadius: 220,
@@ -1212,6 +1214,42 @@
         name: 'Diablillo', icon: '😈', color: '#5a1f6b', radius: 14, hp: 40, damage: 12, speed: 100, behavior: 'blinker', cost: 1.6, yul: [2, 3],
         blinkCooldown: 3.5,
       },
+      // -------- enemigos con mecánicas especiales --------
+      // te apunta con un láser que te sigue; cuando se pone blanco, ¡salí de la línea!
+      francotirador: {
+        name: 'Francotirador de Acero', icon: '🎯', color: '#7a8a6a', radius: 14, hp: 30, damage: 8, speed: 85, behavior: 'sniper', cost: 1.8, yul: [2, 3], hint: '🎯 Francotirador: cuando la mira se pone blanca, ¡salí de la línea!',
+        keepDistance: 430, sightLength: 1400, aimTime: 1.3, lockTime: 0.4, cooldown: 2.4,
+        projectile: { speed: 640, radius: 6, damage: 20, color: '#f0f4ff', life: 2 },
+      },
+      // círculos mágicos donde estás y adonde vas: cambiá de dirección
+      magoSellos: {
+        name: 'Mago de Sellos', icon: '📜', color: '#8a4ab0', radius: 14, hp: 34, damage: 14, speed: 75, behavior: 'sigil', cost: 1.7, yul: [2, 3], hint: '📜 Mago de Sellos: los círculos explotan donde vas a estar. ¡Cambiá de dirección!',
+        keepDistance: 300, castCooldown: 3.6, circleRadius: 58, leads: [0, 0.55, 1.1], firstDelay: 0.95, stagger: 0.28, damageMult: 1, sigilColor: '#c07aff',
+      },
+      // cura y pone escudo a sus compañeros: matalo primero
+      sanador: {
+        name: 'Sanador de la Iglesia', icon: '🧪', color: '#e8f0e0', radius: 14, hp: 32, damage: 6, speed: 95, behavior: 'healer', cost: 1.6, yul: [2, 4], hint: '🧪 Sanador: cura y protege a los demás. ¡Atacalo primero!',
+        fleeDistance: 260, healCooldown: 3.2, healRange: 240, healPct: 0.22, shieldPct: 0.12,
+      },
+      // invisible (no se lo puede atacar), aparece atrás tuyo con un tajo avisado y queda aturdido
+      asesino: {
+        name: 'Asesino de las Sombras', icon: '🌑', color: '#3a2a4a', radius: 14, hp: 44, damage: 12, speed: 120, behavior: 'shadow', cost: 1.9, yul: [2, 4], hint: '🌑 Asesino de las Sombras: se vuelve invisible y aparece atrás tuyo. Pegale cuando queda aturdido.',
+        visibleTime: 2.2, hiddenTime: 1.7, ambushDistance: 95, strikeWindup: 0.55, strikeLength: 170, strikeMult: 1.8, dazedTime: 1.3,
+      },
+      // se rodea de copias; sólo una es la verdadera (las copias se rompen de un golpe)
+      ilusionista: {
+        name: 'Ilusionista', icon: '🪞', color: '#a07ad0', radius: 14, hp: 60, damage: 9, speed: 95, behavior: 'illusionist', cost: 2, yul: [3, 5], hint: '🪞 Ilusionista: sólo uno es el verdadero. Las copias se rompen de un golpe.',
+        cloneId: 'ilusion', maxClones: 2, splitCooldown: 6, ringDistance: 240, fireRate: 2.2,
+        projectile: { speed: 260, radius: 8, damage: 12, color: '#d8b8ff' },
+      },
+      ilusion: {
+        name: 'Ilusión', icon: '🪞', color: '#a07ad0', radius: 14, hp: 1, damage: 3, speed: 95, behavior: 'illusionist', cost: 0, yul: [0, 0], isClone: true,
+        fireRate: 2.6, projectile: { speed: 260, radius: 8, damage: 4, color: '#d8b8ff' },
+      },
+      // une a un compañero con una cadena de luz: mientras el guardián viva, ese compañero es inmune
+      guardian: {
+        name: 'Guardián del Vínculo', icon: '🔗', color: '#d8b040', radius: 19, hp: 75, damage: 12, speed: 80, armor: 4, behavior: 'guardian', cost: 2, yul: [3, 5], hint: '🔗 Guardián del Vínculo: su protegido es inmune. ¡Primero el guardián!',
+      },
       paladin: { name: 'Paladín de Lucius', icon: '🛡️', color: '#e8dca0', radius: 17, hp: 70, damage: 16, speed: 120, armor: 6, behavior: 'chase', cost: 2, yul: [3, 5] },
 
       // -------- ÉLITES: miembros de los Ojos del Sol de Medianoche --------
@@ -1482,7 +1520,7 @@
         id: 'trebol', name: 'Reino del Trébol', subtitle: 'Bosques cercanos a la base de los Toros Negros',
         palette: { bg: '#16241a', floor: '#2b4a2a', floor2: '#30522f', wall: '#0f1a12', accent: '#9be37c', deco: '#3f6b38' },
         deco: ['🌲', '🌿', '🪨', '🍄'],
-        enemies: { bandido: 4, magoBandido: 2, corrompido: 1, loboBosque: 2 },
+        enemies: { bandido: 4, magoBandido: 2, corrompido: 1, loboBosque: 2, magoSellos: 1 },
         lateEnemies: { magoSolMedianoche: 1 },
         elites: ['valtos'], boss: 'vetto', hpMult: 1.15, dmgMult: 1.25,
       },
@@ -1490,7 +1528,7 @@
         id: 'corazon', name: 'Reino del Corazón', subtitle: 'Bosques encantados de los espíritus',
         palette: { bg: '#2a1424', floor: '#4a2742', floor2: '#53304b', wall: '#1c0c18', accent: '#ff8ac8', deco: '#7a3f6a' },
         deco: ['🌸', '🌷', '🪨', '🌳'],
-        enemies: { soldadoPica: 3, espirituMaldito: 2, corrompido: 1, plantaCarnivora: 1 },
+        enemies: { soldadoPica: 3, espirituMaldito: 2, corrompido: 1, plantaCarnivora: 1, sanador: 1, ilusionista: 1 },
         lateEnemies: { magoSolMedianoche: 1 },
         elites: ['rades', 'rhya'], boss: 'vanica', hpMult: 2.2, dmgMult: 1.8,
       },
@@ -1498,7 +1536,7 @@
         id: 'diamante', name: 'Reino del Diamante', subtitle: 'Minas de cristal',
         palette: { bg: '#0f2229', floor: '#1d3d47', floor2: '#22464f', wall: '#08161b', accent: '#7ff3ff', deco: '#2e6a78' },
         deco: ['💎', '🪨', '🔷', '⛏️'],
-        enemies: { soldadoDiamante: 3, magoCristal: 2, corrompido: 1, golemCristal: 1 },
+        enemies: { soldadoDiamante: 3, magoCristal: 2, corrompido: 1, golemCristal: 1, francotirador: 2, guardian: 1, magoSolMedianoche: 1 },
         lateEnemies: { magoSolMedianoche: 1 },
         elites: ['fana', 'ladros'], boss: 'mars', hpMult: 3.9, dmgMult: 2.6,
       },
@@ -1506,7 +1544,7 @@
         id: 'espada', name: 'Reino de Espada', subtitle: 'Fronteras tomadas por la Tríada Oscura',
         palette: { bg: '#221616', floor: '#3a2626', floor2: '#422b2b', wall: '#140c0c', accent: '#ff6a5a', deco: '#5a3434' },
         deco: ['🪦', '🪨', '🔥', '⚔️'],
-        enemies: { guerreroTriada: 3, magoGravedad: 2, corrompido: 1, esclavoMaldito: 2 },
+        enemies: { guerreroTriada: 3, magoGravedad: 2, corrompido: 1, esclavoMaldito: 2, asesino: 2, sanador: 1, magoSellos: 1, francotirador: 1 },
         lateEnemies: { magoSolMedianoche: 1 },
         elites: ['valtos', 'rades', 'ladros'], boss: 'zenon', hpMult: 6.0, dmgMult: 3.3,
       },
@@ -1514,7 +1552,7 @@
         id: 'pica', name: 'Reino de Pica', subtitle: 'Castillo de la Tríada — Puerta del Inframundo',
         palette: { bg: '#120b1e', floor: '#241838', floor2: '#2a1c41', wall: '#08040f', accent: '#b07aff', deco: '#3c2860' },
         deco: ['🕯️', '🪦', '🦇', '⛓️'],
-        enemies: { guerreroTriada: 2, magoGravedad: 2, corrompido: 1, magoSolMedianoche: 1, diablillo: 2, esclavoMaldito: 1 },
+        enemies: { guerreroTriada: 2, magoGravedad: 2, corrompido: 1, magoSolMedianoche: 1, diablillo: 2, esclavoMaldito: 1, asesino: 1, ilusionista: 1, guardian: 1, francotirador: 1 },
         lateEnemies: { magoSolMedianoche: 1 },
         elites: ['fana', 'rades', 'valtos', 'rhya', 'ladros'], boss: 'dante', hpMult: 8.2, dmgMult: 3.9,
       },
@@ -1523,7 +1561,7 @@
         id: 'capital', name: 'Capital del Reino del Trébol', subtitle: 'El trono del Rey Mago... ocupado por Lucius Zogratis',
         palette: { bg: '#2a2414', floor: '#4a4128', floor2: '#544a2e', wall: '#16120a', accent: '#ffe58a', deco: '#6b5f3a' },
         deco: ['👑', '🏛️', '✨', '⛪'],
-        enemies: { paladin: 3, diablillo: 1, magoSolMedianoche: 1 },
+        enemies: { paladin: 3, diablillo: 1, magoSolMedianoche: 1, guardian: 1, sanador: 1, francotirador: 1, asesino: 1 },
         elites: ['rhya', 'ladros'], boss: 'lucius', hpMult: 12, dmgMult: 5.2,
         secret: true, floors: 4,
       },

@@ -391,6 +391,16 @@
     const g = this.game;
     const L = this.lctx;
     const p = g.player;
+    // cadenas de luz del Guardián del Vínculo hacia su protegido
+    for (const e of g.room.enemies) {
+      const gd = e.bondRef;
+      if (e.dead || !gd || gd.dead) continue;
+      const pulse = 0.55 + 0.35 * Math.sin(g.time * 6);
+      L.globalAlpha = pulse;
+      glowLine(L, gd.x / S, gd.y / S, e.x / S, e.y / S, '#ffe58a', 1);
+      L.globalAlpha = 1;
+      ring(L, e.x / S, e.y / S - 2, e.r / S + 3 + (Math.floor(g.time * 6) % 2) * 0.5, '#ffe58a', 0.5);
+    }
     for (const e of g.room.enemies) {
       if (e.dead) continue;
       // ¿se movió desde el cuadro anterior? (para animar las piernas)
@@ -431,7 +441,7 @@
           L.fillStyle = '#5ec8ff';
           L.fillRect(x + sw / 2, y - 2, 1, 1);
         }
-        if (!e.boss && e.hp < e.maxHp) {
+        if (!e.boss && e.hp < e.maxHp && !e.untargetable) {
           const w = Math.max(6, Math.round(sw * 0.7));
           L.fillStyle = '#000';
           L.fillRect(cx - (w >> 1), y - 1, w, 2);

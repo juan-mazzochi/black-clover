@@ -291,7 +291,7 @@
 
       if (this.owner === 'player') {
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning || this.hit.has(e.uid)) continue;
+          if (e.dead || e.untargetable || this.hit.has(e.uid)) continue;
           if (U.dist2(this.x, this.y, e.x, e.y) < (this.r + e.r) ** 2) {
             this.hit.add(e.uid);
             g.hitEnemy(e, this.damage, { knockback: this.knockback, fromX: this.x - this.vx, fromY: this.y - this.vy, source: this.skillId });
@@ -374,7 +374,7 @@
     tornado(z, dt, g) {
       const tick = tickReady(z, dt);
       for (const e of g.room.enemies) {
-        if (e.dead || e.spawning) continue;
+        if (e.dead || e.untargetable) continue;
         const d = U.dist(z.x, z.y, e.x, e.y);
         if (d < z.r + e.r) {
           if (!e.boss && d > 4) {
@@ -399,7 +399,7 @@
     field(z, dt, g) {
       const tick = tickReady(z, dt);
       for (const e of g.room.enemies) {
-        if (e.dead || e.spawning) continue;
+        if (e.dead || e.untargetable) continue;
         const d = U.dist(z.x, z.y, e.x, e.y);
         if (d >= z.r + e.r) continue;
         if (z.slow) {
@@ -419,7 +419,7 @@
       z.y = p.y;
       const tick = tickReady(z, dt);
       for (const e of g.room.enemies) {
-        if (e.dead || e.spawning) continue;
+        if (e.dead || e.untargetable) continue;
         if (U.dist2(z.x, z.y, e.x, e.y) < (z.r + e.r) ** 2) {
           e.slowT = 0.15;
           e.slowAmt = Math.max(e.slowAmt || 0, z.slow);
@@ -441,14 +441,14 @@
       z.y2 = p.y + Math.sin(z.angle) * z.length;
       if (!tickReady(z, dt)) return;
       for (const e of g.room.enemies) {
-        if (e.dead || e.spawning) continue;
+        if (e.dead || e.untargetable) continue;
         if (U.segDist(e.x, e.y, z.x, z.y, z.x2, z.y2) < z.width / 2 + e.r) g.hitEnemy(e, z.damage, { knockback: 30, fromX: p.x, fromY: p.y, source: 'rugidoDragon' });
       }
     },
     shockwave(z, dt, g) {
       z.radius = Math.min(z.maxRadius, z.t * z.speed);
       for (const e of g.room.enemies) {
-        if (e.dead || e.spawning || z.hitSet.has(e.uid)) continue;
+        if (e.dead || e.untargetable || z.hitSet.has(e.uid)) continue;
         const d = U.dist(z.x, z.y, e.x, e.y);
         if (d < z.radius + e.r) {
           z.hitSet.add(e.uid);
@@ -465,7 +465,7 @@
       if (!z.done && z.t >= z.delay) {
         z.done = true;
         for (const e of g.room.enemies) {
-          if (e.dead || e.spawning) continue;
+          if (e.dead || e.untargetable) continue;
           if (U.dist2(z.x, z.y, e.x, e.y) < (z.r + e.r) ** 2) {
             g.hitEnemy(e, z.damage, { knockback: z.knockback, fromX: z.x, fromY: z.y, source: z.source || 'meteorito' });
             if (z.slow) {
@@ -539,7 +539,8 @@
         z.done = true;
         const p = g.player;
         const a = Math.atan2(p.y - z.y, p.x - z.x);
-        g.spawnProjectile({ x: z.x, y: z.y, vx: Math.cos(a) * z.speed, vy: Math.sin(a) * z.speed, r: 9, damage: z.damage, owner: 'enemy', life: 2.5, color: z.color, by: z.by });
+        const sp = z.speed * (g.data.config.enemyProjectileSpeed || 1);
+        g.spawnProjectile({ x: z.x, y: z.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, r: 9, damage: z.damage, owner: 'enemy', life: 2.5, color: z.color, by: z.by });
         z.duration = z.t + 0.25;
       }
     },

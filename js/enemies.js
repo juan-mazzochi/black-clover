@@ -14,11 +14,12 @@
   }
 
   function enemyShot(g, e, ang, o) {
+    const sp = o.speed * (g.data.config.enemyProjectileSpeed || 1);
     g.spawnProjectile({
       x: e.x + Math.cos(ang) * e.r,
       y: e.y + Math.sin(ang) * e.r,
-      vx: Math.cos(ang) * o.speed,
-      vy: Math.sin(ang) * o.speed,
+      vx: Math.cos(ang) * sp,
+      vy: Math.sin(ang) * sp,
       r: o.radius || 8,
       damage: (o.damage || 10) * e.dmgMult,
       owner: 'enemy', by: e.name,
@@ -610,6 +611,302 @@
     // Quieto (se usa en tests)
     none() {},
 
+    // ================= ENEMIGOS CON MECÁNICAS ESPECIALES =================
+
+    // FRANCOTIRADOR: se aleja, te apunta con un láser que te sigue, lo fija
+    // (se pone blanco) y dispara un tiro rapidísimo por esa línea.
+    sniper(g, e, dt, speed) {
+      const p = g.player;
+      const d = e.def;
+      const st = e.st;
+      if (!st.mode) {
+        st.mode = 'move';
+        st.t = 1 + g.rng.float() * 1.5;
+      }
+      const aim = (ang) => {
+        if (!st.zone) return;
+        st.zone.x = e.x;
+        st.zone.y = e.y;
+        st.zone.x2 = e.x + Math.cos(ang) * d.sightLength;
+        st.zone.y2 = e.y + Math.sin(ang) * d.sightLength;
+      };
+      if (st.mode === 'move') {
+        st.t -= dt;
+        const dist = U.dist(e.x, e.y, p.x, p.y);
+        if (dist < d.keepDistance - 60) moveToward(e, p.x, p.y, -speed, dt);
+        else if (dist > d.keepDistance + 80) moveToward(e, p.x, p.y, speed, dt);
+        else strafe(g, e, p, speed * 0.6, dt);
+        if (st.t <= 0) {
+          st.mode = 'aim';
+          st.t = d.aimTime;
+          st.zone = g.spawnZone({ kind: 'warnLine', owner: 'enemy', by: e.name, x: e.x, y: e.y, x2: p.x, y2: p.y, width: 4, duration: d.aimTime + d.lockTime, delay: 0, color: '#ff3030' });
+        }
+      } else if (st.mode === 'aim') {
+        // la mira te sigue
+        st.t -= dt;
+        st.ang = Math.atan2(p.y - e.y, p.x - e.x);
+        aim(st.ang);
+        if (st.t <= 0) {
+          st.mode = 'lock';
+          st.t = d.lockTime;
+          e.windup = d.lockTime;
+          if (st.zone) {
+            st.zone.color = '#ffffff';
+            st.zone.width = 12;
+          }
+          g.sfx('enemyShot');
+        }
+      } else if (st.mode === 'lock') {
+        // fijada: ya no te sigue, ¡salí de la línea!
+        st.t -= dt;
+        aim(st.ang);
+        if (st.t <= 0) {
+          enemyShot(g, e, st.ang, d.projectile);
+          g.addEffect({ type: 'thrust', x: e.x, y: e.y, x2: e.x + Math.cos(st.ang) * 60, y2: e.y + Math.sin(st.ang) * 60, width: 14, life: 0.15, color: d.projectile.color });
+          g.sfx('enemyShot');
+          st.mode = 'move';
+          st.t = d.cooldown;
+          st.zone = null;
+        }
+      }
+    },
+
+    // MAGO DE SELLOS: dibuja círculos mágicos donde estás y adonde vas a estar;
+    // explotan uno tras otro (cambiar de dirección es la clave).
+    sigil(g, e, dt, speed) {
+      const p = g.player;
+      const d = e.def;
+      const st = e.st;
+      patternMove(g, e, 'keepDistance', dt, speed, { keepDistance: d.keepDistance });
+      if (st.cd === undefined) st.cd = 1.5 + g.rng.float() * 1.5;
+      st.cd -= dt;
+      if (st.cd < 0.45 && !st.warned) {
+        st.warned = true;
+        e.windup = 0.45;
+      }
+      if (st.cd <= 0) {
+        st.cd = d.castCooldown;
+        st.warned = false;
+        const leads = d.leads;
+        leads.forEach((lead, i) => {
+          const c = g.clampToArena(p.x + p.vx * lead, p.y + p.vy * lead, d.circleRadius * 0.5);
+          g.spawnZone({ kind: 'telegraphCircle', owner: 'enemy', by: e.name, x: c.x, y: c.y, r: d.circleRadius, delay: d.firstDelay + i * d.stagger, duration: d.firstDelay + i * d.stagger + 0.3, damage: e.damage * d.damageMult, color: d.sigilColor });
+        });
+        g.addEffect({ type: 'ring', x: e.x, y: e.y, r0: 6, r1: 40, life: 0.35, color: d.sigilColor, width: 4 });
+        g.sfx('enemyShot');
+      }
+    },
+
+    // SANADOR: se esconde detrás de sus compañeros y cada tanto los cura y les
+    // da un escudo. Conviene ir a buscarlo primero.
+    healer(g, e, dt, speed) {
+      const p = g.player;
+      const d = e.def;
+      const st = e.st;
+      // centro de los aliados cercanos
+      let cx = 0;
+      let cy = 0;
+      let n = 0;
+      for (const o of g.room.enemies) {
+        if (o === e || o.dead || o.boss) continue;
+        if (U.dist2(o.x, o.y, e.x, e.y) > 500 * 500) continue;
+        cx += o.x;
+        cy += o.y;
+        n++;
+      }
+      const dist = U.dist(e.x, e.y, p.x, p.y);
+      if (dist < d.fleeDistance) moveToward(e, p.x, p.y, -speed, dt);
+      else if (n) {
+        // detrás de sus compañeros, del lado contrario al jugador
+        cx /= n;
+        cy /= n;
+        const away = U.norm(cx - p.x, cy - p.y);
+        const tx = cx + away.x * 110;
+        const ty = cy + away.y * 110;
+        if (U.dist2(e.x, e.y, tx, ty) > 30 * 30) moveToward(e, tx, ty, speed, dt);
+      } else strafe(g, e, p, speed * 0.7, dt);
+      if (st.cd === undefined) st.cd = 2 + g.rng.float();
+      st.cd -= dt;
+      if (st.cd < 0.5 && !st.warned) {
+        st.warned = true;
+        e.windup = 0.5;
+      }
+      if (st.cd <= 0) {
+        st.cd = d.healCooldown;
+        st.warned = false;
+        let healed = 0;
+        for (const o of g.room.enemies) {
+          if (o.dead || o.boss || o.untargetable) continue;
+          if (U.dist2(o.x, o.y, e.x, e.y) > d.healRange * d.healRange) continue;
+          const amt = Math.round(o.maxHp * (o === e ? d.healPct * 0.5 : d.healPct));
+          const before = o.hp;
+          o.hp = Math.min(o.maxHp, o.hp + amt);
+          o.shield = Math.min(o.maxHp * 0.5, (o.shield || 0) + o.maxHp * d.shieldPct);
+          if (o !== e) g.addEffect({ type: 'lineFlash', x: e.x, y: e.y, x2: o.x, y2: o.y, width: 6, life: 0.35, color: '#7dff9a' });
+          if (o.hp > before) g.floatText(o.x, o.y - o.r - 12, '+' + Math.round(o.hp - before), '#7dff9a');
+          healed++;
+        }
+        g.addEffect({ type: 'ring', x: e.x, y: e.y, r0: 10, r1: d.healRange, life: 0.45, color: '#7dff9a', width: 4 });
+        if (healed) g.sfx('cast');
+      }
+    },
+
+    // ASESINO DE SOMBRAS: se hace invisible (no se lo puede atacar), da la vuelta
+    // y aparece atrás tuyo con un tajo avisado. Después queda aturdido un rato.
+    shadow(g, e, dt, speed) {
+      const p = g.player;
+      const d = e.def;
+      const st = e.st;
+      if (!st.mode) {
+        st.mode = 'stalk';
+        st.t = d.visibleTime * (0.5 + g.rng.float());
+      }
+      st.t -= dt;
+      if (st.mode === 'stalk') {
+        moveToward(e, p.x, p.y, speed, dt);
+        if (st.t <= 0) {
+          st.mode = 'hidden';
+          st.t = d.hiddenTime;
+          e.untargetable = true;
+          g.particle(e.x, e.y, '#2a1a3a', 14, 160, 0.5);
+        }
+      } else if (st.mode === 'hidden') {
+        // casi invisible: se nota un brillo leve
+        e.alpha = 0.1 + 0.08 * Math.sin(g.time * 12);
+        const bx = p.x - Math.cos(p.facing) * d.ambushDistance;
+        const by = p.y - Math.sin(p.facing) * d.ambushDistance;
+        moveToward(e, bx, by, speed * 1.8, dt);
+        if (st.t <= 0) {
+          // aparece justo atrás del jugador
+          const c = g.clampToArena(bx, by, e.r + 6);
+          e.x = c.x;
+          e.y = c.y;
+          e.alpha = 1;
+          e.untargetable = false;
+          st.mode = 'windup';
+          st.t = d.strikeWindup;
+          e.windup = d.strikeWindup;
+          st.ang = Math.atan2(p.y - e.y, p.x - e.x);
+          const len = d.strikeLength;
+          g.spawnZone({ kind: 'telegraphLine', owner: 'enemy', by: e.name, x: e.x, y: e.y, x2: e.x + Math.cos(st.ang) * len, y2: e.y + Math.sin(st.ang) * len, width: 46, delay: d.strikeWindup, duration: d.strikeWindup + 0.3, damage: e.damage * d.strikeMult, color: '#b04aff' });
+          g.particle(e.x, e.y, '#2a1a3a', 14, 160, 0.5);
+          g.floatText(e.x, e.y - e.r - 14, '!', '#ff4a4a');
+        }
+      } else if (st.mode === 'windup') {
+        if (st.t <= 0) {
+          // el tajo: avanza por la línea
+          st.mode = 'dash';
+          st.t = 0.14;
+          g.addEffect({ type: 'slash', x: e.x, y: e.y, angle: st.ang, arc: 1.4, range: 90, life: 0.2, color: '#c07aff' });
+        }
+      } else if (st.mode === 'dash') {
+        e.x += Math.cos(st.ang) * (d.strikeLength / 0.14) * dt;
+        e.y += Math.sin(st.ang) * (d.strikeLength / 0.14) * dt;
+        if (st.t <= 0) {
+          st.mode = 'dazed';
+          st.t = d.dazedTime;
+        }
+      } else if (st.mode === 'dazed') {
+        // aturdido: es el momento de pegarle
+        if (st.t <= 0) {
+          st.mode = 'stalk';
+          st.t = d.visibleTime;
+        }
+      }
+    },
+
+    // ILUSIONISTA: crea copias suyas y se mezcla entre ellas. Las copias se
+    // rompen con un golpe y pegan poco; sólo la verdadera tiene vida.
+    illusionist(g, e, dt, speed) {
+      const p = g.player;
+      const d = e.def;
+      const st = e.st;
+      if (d.isClone) {
+        // las copias desaparecen si la verdadera ya no está
+        const m = st.master;
+        if (!m || m.dead) {
+          e.dead = true;
+          g.particle(e.x, e.y, '#d8b8ff', 10, 140, 0.4);
+          return;
+        }
+      }
+      patternMove(g, e, 'strafe', dt, speed, {});
+      if (st.fire === undefined) st.fire = 1 + g.rng.float() * d.fireRate;
+      st.fire -= dt;
+      if (st.fire < 0.3) e.windup = Math.max(0, st.fire);
+      if (st.fire <= 0) {
+        st.fire = d.fireRate * (0.85 + g.rng.float() * 0.3);
+        enemyShot(g, e, Math.atan2(p.y - e.y, p.x - e.x), d.projectile);
+        g.sfx('enemyShot');
+      }
+      if (d.isClone) return;
+      if (st.split === undefined) st.split = 1.2;
+      st.split -= dt;
+      if (st.split <= 0) {
+        st.split = d.splitCooldown;
+        st.clones = (st.clones || []).filter((c) => !c.dead);
+        while (st.clones.length < d.maxClones) {
+          const c = g.spawnEnemy(d.cloneId, e.x, e.y);
+          c.st.master = e;
+          st.clones.push(c);
+        }
+        // se reparten al azar alrededor del jugador: ¿cuál es la verdadera?
+        const group = [e].concat(st.clones);
+        const off = g.rng.float() * Math.PI * 2;
+        const slots = group.map((_, i) => off + (i / group.length) * Math.PI * 2);
+        for (let i = slots.length - 1; i > 0; i--) {
+          const j = Math.floor(g.rng.float() * (i + 1));
+          [slots[i], slots[j]] = [slots[j], slots[i]];
+        }
+        group.forEach((o, i) => {
+          g.particle(o.x, o.y, '#d8b8ff', 8, 140, 0.35);
+          const c = g.clampToArena(p.x + Math.cos(slots[i]) * d.ringDistance, p.y + Math.sin(slots[i]) * d.ringDistance, o.r + 8);
+          o.x = c.x;
+          o.y = c.y;
+          o.st.fire = 0.9 + g.rng.float() * 0.6;
+          g.particle(o.x, o.y, '#d8b8ff', 8, 140, 0.35);
+        });
+        g.sfx('enemyShot');
+      }
+    },
+
+    // GUARDIÁN DEL VÍNCULO: une a un compañero con una cadena de luz. Mientras
+    // el guardián viva, ese compañero no recibe daño. ¡Primero el guardián!
+    guardian(g, e, dt, speed) {
+      const p = g.player;
+      const st = e.st;
+      let t = st.bond && !st.bond.dead ? st.bond : null;
+      if (!t) {
+        st.bondCd = (st.bondCd || 0) - dt;
+        if (st.bondCd <= 0) {
+          let best = null;
+          let bd = 600 * 600;
+          for (const o of g.room.enemies) {
+            if (o === e || o.dead || o.boss || o.bondRef || o.def.behavior === 'guardian' || o.def.isClone) continue;
+            const dd = U.dist2(o.x, o.y, e.x, e.y);
+            if (dd < bd) {
+              bd = dd;
+              best = o;
+            }
+          }
+          if (best) {
+            best.bondRef = e;
+            st.bond = best;
+            t = best;
+            g.addEffect({ type: 'lineFlash', x: e.x, y: e.y, x2: best.x, y2: best.y, width: 10, life: 0.4, color: '#ffe58a' });
+            g.floatText(best.x, best.y - best.r - 14, '¡Protegido!', '#ffe58a');
+          } else st.bondCd = 1;
+        }
+      }
+      if (t) {
+        // se pone entre su protegido y el jugador
+        const n = U.norm(p.x - t.x, p.y - t.y);
+        const tx = t.x + n.x * 70;
+        const ty = t.y + n.y * 70;
+        if (U.dist2(e.x, e.y, tx, ty) > 20 * 20) moveToward(e, tx, ty, speed, dt);
+      } else moveToward(e, p.x, p.y, speed, dt);
+    },
+
     pattern(g, e, dt, speed) {
       const phases = e.def.phases;
       const st = e.st;
@@ -727,9 +1024,9 @@
     e.x = U.clamp(e.x, b.x1 + e.r, b.x2 - e.r);
     e.y = U.clamp(e.y, b.y1 + e.r, b.y2 - e.r);
 
-    // Daño por contacto
+    // Daño por contacto (no cuando está invisible)
     const p = g.player;
-    if (U.dist2(e.x, e.y, p.x, p.y) < (e.r + p.r - 2) ** 2) {
+    if (!e.untargetable && U.dist2(e.x, e.y, p.x, p.y) < (e.r + p.r - 2) ** 2) {
       if (e.charging && !e.chargeHit) {
         e.chargeHit = true;
         g.hurtPlayer(e.chargeDamage, { x: e.x, y: e.y, by: e.name });

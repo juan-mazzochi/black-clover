@@ -88,6 +88,21 @@ El **menú principal** tiene un paisaje nocturno animado en pixel art (el castil
 - Los **círculos y líneas rojas** en el piso avisan dónde va a caer un ataque. ¡Salí de ahí!
 - Ciertas combinaciones activan **sinergias** (por ejemplo, Noelle + 2 reliquias de maná = *Valquiria Desbordante*). Las ves en **Grimorio → Sinergias** y en la pausa.
 
+## 👹 Enemigos con mecánicas especiales
+
+Además de los que persiguen y disparan, hay enemigos que obligan a jugar distinto. La primera vez que aparece cada uno en la partida, un cartel explica qué hacer.
+
+| Enemigo | Qué hace | Cómo ganarle |
+|---|---|---|
+| 🎯 **Francotirador de Acero** | Te apunta con un láser rojo que te sigue; cuando se pone blanco, dispara un tiro rapidísimo | Salí de la línea apenas se pone blanca |
+| 📜 **Mago de Sellos** | Dibuja 3 círculos mágicos: donde estás y adonde vas a estar | Cambiá de dirección |
+| 🧪 **Sanador de la Iglesia** | Se esconde detrás de los demás, los cura y les pone escudo | Atacalo primero |
+| 🌑 **Asesino de las Sombras** | Se vuelve invisible (no se lo puede atacar) y aparece atrás tuyo con un tajo avisado | Esquivá el tajo y pegale cuando queda aturdido |
+| 🪞 **Ilusionista** | Se rodea de copias iguales a él; sólo una es la verdadera | Las copias se rompen de un golpe |
+| 🔗 **Guardián del Vínculo** | Une a un compañero con una cadena de luz: ese compañero es inmune | Primero el guardián |
+
+**Dificultad:** las balas enemigas son un 35% más rápidas, las definitivas tardan más en cargarse (sobre todo el Modo Demonio de Asta) y cada nivel pide más experiencia. Todo eso se ajusta en `js/data.js` (`xp`, `enemyProjectileSpeed` y los `gainPer...` de cada definitiva).
+
 ## ⭐ Progreso entre partidas
 
 - Al terminar una partida (ganes o pierdas) ganás **estrellas**. Las mejoras tienen muchos niveles: completarlas lleva bastantes partidas.

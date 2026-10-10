@@ -389,6 +389,13 @@
     diablillo: { kind: 'h', skin: '#8a3aa0', hair: '#2a0a30', hairStyle: 'short', horns: '#f2efe0', wings: '#3a1040', cloth: '#5a1f6b', eyes: '#ff3030' },
     magoSolMedianoche: { kind: 'h', skin: SKIN, hairStyle: 'hood', hood: '#d8a33a', cloth: '#f0e0b0', outfit: 'robe', accent: '#ff9a2a', weapon: 'staff', gem: '#ffd76a' },
     cadaver: { kind: 'h', skin: '#8a9a7a', hair: '#3a3a2a', hairStyle: 'short', cloth: '#5a5a48', outfit: 'rags', eyes: '#d0ff60' },
+    // enemigos con mecánicas especiales
+    francotirador: { kind: 'h', skin: SKIN, hairStyle: 'hood', hood: '#3a4a34', cloth: '#556a48', accent: '#c8b070', pants: '#3a3a2a', weapon: 'bow', mask: '#2a3024', eyes: '#ff4040' },
+    magoSellos: { kind: 'h', skin: SKIN, hair: '#e0e0f0', hairStyle: 'hat', hat: '#5a2a7a', cloth: '#6a3a90', accent: '#e8c860', outfit: 'robe', book: '#c07aff' },
+    sanador: { kind: 'h', skin: '#f0d8c0', hairStyle: 'hood', hood: '#f4f0e0', cloth: '#e8f0e0', accent: '#7dd88a', outfit: 'robe', weapon: 'staff', gem: '#7dff9a', eyes: '#3a8a4a' },
+    asesino: { kind: 'h', skin: '#c8b8c8', hairStyle: 'hood', hood: '#1e1626', cloth: '#2a2034', accent: '#b04aff', pants: '#1a1420', cape: '#120c18', mask: '#120c18', weapon: 'dagger', eyes: '#d080ff' },
+    ilusionista: { kind: 'h', skin: '#f4e8f0', hair: '#d8b8ff', hairStyle: 'long', cloth: '#7a4ab0', accent: '#ffd76a', outfit: 'dress', mask: '#f4f0e8', book: '#d8b8ff', eyes: '#7a3ab0' },
+    guardian: { kind: 'h', size: 'l', skin: SKIN, hairStyle: 'helmet', helmet: '#e8c860', crest: '#ffffff', cloth: '#c8a040', outfit: 'armor', accent: '#fff0b0', weapon: 'spear', eyes: '#80d0ff' },
     paladin: { kind: 'h', skin: SKIN, hairStyle: 'helmet', helmet: '#e8dca0', cloth: '#f2f0e0', outfit: 'armor', accent: '#d8b040', weapon: 'sword' },
     // élites (Ojos del Sol de Medianoche y otros)
     valtos: { kind: 'h', skin: SKIN, hair: '#2a2a48', hairStyle: 'short', cloth: '#3a4ab0', accent: '#9aa6ff', outfit: 'robe', cape: '#1a1a3a', weapon: 'dagger', mask: '#d8d8f0' },
@@ -406,6 +413,8 @@
     lucius: { kind: 'h', size: 'l', skin: '#f0d8c0', hair: '#f0d070', hairStyle: 'short', cloth: '#f5e6b0', accent: '#d8b040', outfit: 'robe', halo: '#ffe58a', book: '#d8b040', eyes: '#c04020' },
     luciusPaladin: { kind: 'h', size: 'l', skin: '#f0d8c0', hair: '#f0d070', hairStyle: 'helmet', helmet: '#fffbe0', cloth: '#fffbe0', accent: '#ffd76a', outfit: 'armor', wings: '#ffffff', halo: '#ffe58a', weapon: 'sword', eyes: '#c04020' },
   };
+
+  ENEMY_LOOKS.ilusion = ENEMY_LOOKS.ilusionista; // las copias se ven igual que la verdadera
 
   function build(look, frame) {
     switch (look.kind) {

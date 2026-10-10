@@ -183,6 +183,14 @@
       const scale = BC.Combat.enemyScaling(this.run.realmIndex, this.run.floorIndex, this.ascMods, data, !!def.boss);
       const e = new E.Enemy(id, def, x, y, scale);
       this.room.enemies.push(e);
+      // la primera vez en la partida que aparece un enemigo con mecánica especial, se explica
+      if (def.hint && this.run) {
+        this.run.seenHints = this.run.seenHints || {};
+        if (!this.run.seenHints[id]) {
+          this.run.seenHints[id] = true;
+          this.toast(def.hint, '#ffe58a', 5.5);
+        }
+      }
       if (opts && opts.owner) (opts.owner.minions = opts.owner.minions || []).push(e);
       if (def.boss) this.room.boss = e;
       if (def.elite) this.room.elite = e;
@@ -215,7 +223,7 @@
       let best = null;
       let bd = range * range;
       for (const e of this.room.enemies) {
-        if (e.dead) continue;
+        if (e.dead || e.untargetable) continue;
         const d = U.dist2(x, y, e.x, e.y) - e.r * e.r;
         if (d < bd) {
           bd = d;
@@ -244,7 +252,19 @@
 
     // ---------------- daño ----------------
     hitEnemy(e, base, o) {
-      if (!e || e.dead) return 0;
+      if (!e || e.dead || e.untargetable) return 0;
+      // protegido por un Guardián del Vínculo vivo: no recibe daño
+      if (e.bondRef) {
+        if (!e.bondRef.dead) {
+          e.flash = 0.05;
+          if (!e.immuneTextT || this.time - e.immuneTextT > 0.6) {
+            e.immuneTextT = this.time;
+            this.floatText(e.x, e.y - e.r - 12, 'Inmune', '#ffe58a');
+          }
+          return 0;
+        }
+        e.bondRef = null;
+      }
       const opt = o || {};
       const p = this.player;
       const eff = p.eff;
@@ -294,6 +314,13 @@
       if (e.dead) return;
       e.dead = true;
       const run = this.run;
+      // copias del Ilusionista: se rompen sin dar recompensa
+      if (e.def.isClone) {
+        this.particle(e.x, e.y, '#d8b8ff', 14, 180, 0.5);
+        this.floatText(e.x, e.y - 20, '¡Ilusión!', '#d8b8ff');
+        this.sfx('kill');
+        return;
+      }
       run.kills++;
       // experiencia
       const ups = BC.Run.addXp(run, BC.Run.enemyXp(e.def, this.data), this.data);
@@ -801,9 +828,9 @@
       if (this.headless) return;
       this.texts.push({ x, y, text, color, size: 16, t: 0, life: 1.1 });
     }
-    toast(text, color) {
+    toast(text, color, life) {
       if (this.headless) return;
-      this.toasts.push({ text, color: color || '#fff', t: 0, life: 2.5 });
+      this.toasts.push({ text, color: color || '#fff', t: 0, life: life || 2.5 });
       if (this.toasts.length > 4) this.toasts.shift();
     }
     banner(text, sub, life) {

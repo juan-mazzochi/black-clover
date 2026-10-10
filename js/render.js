@@ -564,6 +564,22 @@
     drawEnemies() {
       const g = this.game;
       const ctx = this.ctx;
+      // cadenas de luz del Guardián del Vínculo
+      for (const e of g.room.enemies) {
+        if (e.dead || !e.bondRef || e.bondRef.dead) continue;
+        ctx.save();
+        ctx.globalAlpha = 0.55 + 0.35 * Math.sin(g.time * 6);
+        ctx.strokeStyle = '#ffe58a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(e.bondRef.x, e.bondRef.y);
+        ctx.lineTo(e.x, e.y);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.arc(e.x, e.y, e.r + 8, 0, TAU);
+        ctx.stroke();
+        ctx.restore();
+      }
       for (const e of g.room.enemies) {
         if (e.dead) continue;
         ctx.save();
