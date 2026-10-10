@@ -63,6 +63,7 @@
           metaLevels: meta.upgrades,
           unlockedRelics: BC.Save.unlockedRelics(meta, data),
           includeSecret: BC.Save.secretUnlocked(meta, data),
+          endless: !!opts.endless,
         },
         data
       );
@@ -102,7 +103,7 @@
         waves: [],
         waveIndex: 0,
         waveTimer: 0,
-        combat: node.type === 'combat' || node.type === 'elite' || node.type === 'boss',
+        combat: node.type === 'combat' || node.type === 'ambush' || node.type === 'elite' || node.type === 'boss',
         cleared: false,
         clearT: 0,
         rewardOffered: false,
@@ -121,8 +122,9 @@
       if (node.realm !== prevRealm) this.banner(realm.name, realm.subtitle, 2.6);
 
       const enc = room.combat ? BC.MapGen.generateEncounter(run.seed, node, data, this.ascMods) : null;
-      if (node.type === 'combat') {
+      if (node.type === 'combat' || node.type === 'ambush') {
         room.waves = enc.waves;
+        if (node.type === 'ambush') this.banner('¡Emboscada!', 'Sobreviví y el cofre es tuyo', 2);
       } else if (node.type === 'elite') {
         room.waves = enc.waves;
         this.queueSpawn(enc.elite, c.width / 2, this.bounds.y1 + 140, { telegraph: 1.0 });
@@ -180,7 +182,7 @@
       const data = this.data;
       const def = data.enemies[id] || data.bosses[id];
       if (!def) throw new Error('Enemigo desconocido: ' + id);
-      const scale = BC.Combat.enemyScaling(this.run.realmIndex, this.run.floorIndex, this.ascMods, data, !!def.boss);
+      const scale = BC.Combat.enemyScaling(this.run.realmIndex, this.run.floorIndex, this.ascMods, data, !!def.boss, this.run.loop);
       const e = new E.Enemy(id, def, x, y, scale);
       this.room.enemies.push(e);
       // la primera vez en la partida que aparece un enemigo con mecánica especial, se explica
@@ -566,6 +568,10 @@
             if (healed > 0) this.floatText(this.player.x, this.player.y - 30, '+' + Math.round(healed), '#7dff9a');
           }
           if (room.node.type !== 'boss') this.toast('¡Sala despejada!', '#ffd76a');
+          if (room.node.type === 'ambush') {
+            this.room.pickups.push(new E.Pickup('chest', this.player.x, this.player.y - 70, 0, 0, -40));
+            this.floatText(this.player.x, this.player.y - 90, '¡Un cofre!', '#ffd76a');
+          }
           this.sfx('clear');
           this.emit('roomClear', room.node);
         }
@@ -576,7 +582,7 @@
         room.rewardOffered = true;
         const t = room.node.type;
         // las salas de combate normales no dan recompensa: las mejoras llegan al subir de nivel
-        if (t === 'combat') this.openDoors();
+        if (t === 'combat' || t === 'ambush') this.openDoors();
         else this.offerReward(t === 'boss' ? 'boss' : 'elite');
       }
     }
@@ -652,11 +658,25 @@
       if (kind === 'level') return; // subir de nivel no cambia de sala
       // la partida termina con el último reino del mapa (el secreto, si está desbloqueado)
       if (kind === 'boss' && run.realmIndex === run.map.realms.length - 1) {
+        if (run.endless) return this.nextLoop();
         this.victory();
         return;
       }
       if (kind === 'train') this.room.cleared = true;
       if (kind === 'boss' && run.realmIndex === run.map.realms.length - 2 && run.secret) this.banner('Algo más te espera...', 'Un poder enorme te llama desde la capital', 3);
+      this.openDoors();
+    }
+
+    // MODO INFINITO: termina un ciclo y empieza otro, más difícil
+    nextLoop() {
+      const run = this.run;
+      const en = this.data.endless;
+      run.loop++;
+      run.map = BC.MapGen.generateMap(run.seed, this.data, BC.Stats.worldMods(run.ascension, run.metaLevels, this.data), false, run.loop);
+      run.nodeId = null; // las próximas puertas son las del primer piso del ciclo nuevo
+      BC.Run.healPct(run, en.healPctPerLoop);
+      this.banner('♾ Ciclo ' + (run.loop + 1), 'Los enemigos se vuelven más fuertes...', 3);
+      this.sfx('ult');
       this.openDoors();
     }
 
@@ -675,16 +695,25 @@
     openDoors() {
       const room = this.room;
       const nodes = BC.Run.nextNodes(this.run);
-      const W = this.data.config.width;
-      const spacing = 230;
-      room.doors = nodes.map((node, i) => ({
-        x: W / 2 + (i - (nodes.length - 1) / 2) * spacing,
-        y: this.bounds.y1 + 40,
-        w: 90,
-        h: 70,
-        node,
-        nextRealm: node.realm !== room.node.realm,
-      }));
+      const b = this.bounds;
+      const cx = (b.x1 + b.x2) / 2;
+      const cy = (b.y1 + b.y2) / 2;
+      // lugares posibles: arriba, a la izquierda y a la derecha (siempre en el centro de esa pared).
+      // Cuál puerta va en cada lado cambia de sala en sala (fijo por semilla).
+      const slots = [
+        { x: cx, y: b.y1 + 40, w: 90, h: 70 },
+        { x: b.x1 + 40, y: cy, w: 70, h: 90 },
+        { x: b.x2 - 40, y: cy, w: 70, h: 90 },
+      ];
+      const rng = new BC.RNG(this.run.seed + ':doors:' + (this.run.nodeId || 'start') + ':' + (this.run.loop || 0));
+      for (let i = slots.length - 1; i > 0; i--) {
+        const j = rng.int(0, i);
+        [slots[i], slots[j]] = [slots[j], slots[i]];
+      }
+      room.doors = nodes.map((node, i) => {
+        const s = slots[i % slots.length];
+        return { x: s.x, y: s.y, w: s.w, h: s.h, node, nextRealm: node.realm !== room.node.realm || (node.loop || 0) !== (room.node.loop || 0) };
+      });
       room.doorsT = 0;
       room.cleared = true;
       this.emit('doorsOpen', room.doors);
@@ -763,6 +792,8 @@
         bossesDefeated: run.bossesDefeated.slice(),
         kills: run.kills,
         realmReached: run.realmIndex,
+        endless: !!run.endless,
+        loop: run.loop || 0,
         floorReached: run.floorIndex,
         time: run.time,
         level: run.level,

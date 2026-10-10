@@ -14,7 +14,8 @@
   }
 
   function enemyShot(g, e, ang, o) {
-    const sp = o.speed * (g.data.config.enemyProjectileSpeed || 1);
+    const loop = (g.run && g.run.loop) || 0;
+    const sp = o.speed * (g.data.config.enemyProjectileSpeed || 1) * (1 + (g.data.endless ? g.data.endless.bulletPerLoop : 0) * loop);
     g.spawnProjectile({
       x: e.x + Math.cos(ang) * e.r,
       y: e.y + Math.sin(ang) * e.r,

@@ -104,6 +104,8 @@
     const st = data.meta.stars;
     let n = Math.floor(summary.roomsCleared / st.perRoomsCleared) + summary.elitesKilled * st.perElite + summary.bossesDefeated.length * st.perBoss;
     if (summary.won) n += st.onWin;
+    // modo infinito: estrellas extra por cada ciclo completado
+    if (summary.endless && data.endless) n += (summary.loop || 0) * data.endless.starsPerLoop;
     return Math.round(n * (1 + st.ascensionBonus * (summary.ascension || 0) + (summary.starBonus || 0)));
   }
 
@@ -118,6 +120,16 @@
     s.stats.kills += summary.kills || 0;
     s.stats.bestRealm = Math.max(s.stats.bestRealm, (summary.realmReached || 0) + 1);
     for (const b of summary.bossesDefeated) if (s.bossesDefeated.indexOf(b) === -1) s.bossesDefeated.push(b);
+    // récord del modo infinito: el que recorrió más salas
+    let newEndlessRecord = false;
+    if (summary.endless) {
+      const cur = { loop: summary.loop || 0, realm: summary.realmReached || 0, floor: summary.floorReached || 0, rooms: summary.roomsCleared || 0, characterId: summary.characterId };
+      const prev = s.stats.bestEndless;
+      if (!prev || cur.rooms > prev.rooms) {
+        s.stats.bestEndless = cur;
+        newEndlessRecord = true;
+      }
+    }
     let newAscension = false;
     if (summary.won) {
       s.stats.wins += 1;
@@ -138,7 +150,8 @@
     }
     const need = data.config.secretUnlockWins;
     const newSecret = summary.won && s.stats.wins === need;
-    return { save: s, stars, newUnlocks, newAscension, newAchievements, newSecret };
+    const newEndless = summary.won && s.stats.wins === 1; // la primera victoria desbloquea el modo infinito
+    return { save: s, stars, newUnlocks, newAscension, newAchievements, newSecret, newEndless, newEndlessRecord };
   }
 
   function buyCharacter(s0, id, data) {

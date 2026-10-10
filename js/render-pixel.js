@@ -16,7 +16,7 @@
   const qh = (v) => Math.round((v / S) * HD) / HD;
 
   const ULT_RING = { asta: '#c41e1e', yuno: '#7fe0c8', noelle: '#bfe9ff', mago: '#ffe58a' };
-  const ROOM_ICON = { combat: 'combat', elite: 'elite', shop: 'shop', event: 'event', rest: 'rest', boss: 'boss' };
+  const ROOM_ICON = { combat: 'combat', ambush: 'ambush', elite: 'elite', shop: 'shop', event: 'event', rest: 'rest', boss: 'boss' };
 
   const proto = BC.Renderer.prototype;
 
@@ -417,6 +417,15 @@
       L.fillStyle = 'rgba(0,0,0,0.35)';
       L.fillRect(cx - Math.round(e.r / S), feet, Math.round((e.r * 2) / S), 1);
       if (e.boss || e.elite) ditherCircle(L, cx, feet - 1, Math.round(e.r / S) + 1, e.boss ? 'rgba(255,215,106,0.5)' : 'rgba(213,140,255,0.45)');
+      // jefe en una fase nueva: aura que late (más roja en cada fase)
+      const phase = e.boss && e.st ? e.st.phase || 0 : 0;
+      if (phase > 0) {
+        const col = phase === 1 ? '#ff6a3a' : '#ff2060';
+        L.globalAlpha = e.alpha * (0.35 + 0.25 * Math.sin(g.time * 5));
+        ditherCircle(L, cx, feet - e.r / S, e.r / S + 3, col);
+        L.globalAlpha = e.alpha;
+        glowRing(L, cx, feet - e.r / S, e.r / S + 4 + Math.sin(g.time * 5), col, 0.5);
+      }
       if (spr) {
         const sw = P.dw(spr);
         const sh = P.dh(spr);
@@ -486,7 +495,7 @@
     const moving = Math.abs(p.vx) + Math.abs(p.vy) > 1;
     const frame = moving ? 1 + (Math.floor(g.time * 8) % 2) : 0;
     const flip = Math.cos(p.facing) < 0;
-    const spr = P.playerSprite(ch.id, frame, flip);
+    const spr = P.playerSprite(ch.id, frame, flip, p.ult.active ? 'ult' : null);
     const cx = q(p.x);
     const feet = q(p.y + p.r * 0.9);
     L.fillStyle = 'rgba(0,0,0,0.4)';

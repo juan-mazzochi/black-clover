@@ -78,9 +78,9 @@
         for (let f = 1; f < F - 2; f++) {
           const types = realm.floors[f].map((n) => n.type);
           assert(types.length >= D.mapgen.choicesMin && types.length <= D.mapgen.choicesMax, 'cantidad de opciones ' + types.length);
-          const specials = types.filter((t) => t !== 'combat');
-          eq(new Set(specials).size, specials.length, 'sala especial repetida en el mismo piso');
-          assert(types.some((t) => t === 'combat' || t === 'elite'), 'falta sala de pelea');
+          // ninguna puerta repetida en el mismo piso (tampoco dos de combate)
+          eq(new Set(types).size, types.length, 'puerta repetida en el mismo piso: ' + types.join(','));
+          assert(types.some((t) => t === 'combat' || t === 'elite' || t === 'ambush'), 'falta sala de pelea');
           for (const t of types) {
             const def = D.rooms[t];
             assert(def && t !== 'boss', 'tipo inválido ' + t);
@@ -91,7 +91,7 @@
         for (const t in counts) if (D.rooms[t].maxPerRealm !== undefined) assert(counts[t] <= D.rooms[t].maxPerRealm, 'demasiadas salas de ' + t);
         // una sala especial nunca se repite en el piso siguiente
         for (let f = 1; f < F; f++) {
-          const prevSpecial = realm.floors[f - 1].map((n) => n.type).filter((t) => t !== 'combat');
+          const prevSpecial = realm.floors[f - 1].map((n) => n.type).filter((t) => t !== 'combat' && t !== 'ambush');
           for (const n of realm.floors[f]) assert(prevSpecial.indexOf(n.type) === -1, 'sala especial repetida seguida: ' + n.type + ' en piso ' + f);
         }
       });
@@ -1171,6 +1171,45 @@
       { slow: true }
     );
   }
+
+  test(
+    'Modo infinito: después del último jefe empieza el ciclo 2, más difícil',
+    () => {
+      const r = BC.Bot.simulate({ characterId: 'yuno', seed: 'INFINITO', god: true, endless: true, untilLoop: 1, maxTime: 9000 });
+      if (r.error) throw new Error(r.error);
+      const g = r.game;
+      eq(g.run.over, false, 'la partida sigue');
+      eq(g.run.loop, 1, 'ciclo 2');
+      eq(g.run.realmIndex, 0, 'vuelve al primer reino');
+      const s1 = BC.Combat.enemyScaling(4, 3, {}, D, false, 0);
+      const s2 = BC.Combat.enemyScaling(0, 3, {}, D, false, 1);
+      assert(s2.hp >= s1.hp && s2.dmg >= s1.dmg, 'el ciclo 2 no es más fácil que el final del 1');
+      // al morir, el guardado registra el récord y da estrellas por ciclo
+      const res = BC.Save.applyRunResult(BC.Save.defaultSave(), Object.assign(g.summary(), { won: false }), D);
+      eq(res.save.stats.bestEndless.loop, 1);
+      assert(res.newEndlessRecord, 'récord nuevo');
+    },
+    { slow: true }
+  );
+
+  test('Puertas: nunca hay dos iguales y van arriba, a la izquierda o a la derecha', () => {
+    const g = new BC.Game({ headless: true });
+    g.startRun({ characterId: 'asta', seed: 'PUERTAS' });
+    for (let i = 0; i < 5; i++) {
+      g.room.node = g.run.map.realms[0].floors[i + 1][0];
+      g.run.nodeId = g.room.node.id;
+      g.openDoors();
+      const types = g.room.doors.map((d) => d.node.type);
+      eq(new Set(types).size, types.length, 'puertas repetidas');
+      const b = g.bounds;
+      for (const d of g.room.doors) {
+        const top = Math.abs(d.y - (b.y1 + 40)) < 1 && Math.abs(d.x - (b.x1 + b.x2) / 2) < 1;
+        const side = Math.abs(d.y - (b.y1 + b.y2) / 2) < 1 && (Math.abs(d.x - (b.x1 + 40)) < 1 || Math.abs(d.x - (b.x2 - 40)) < 1);
+        assert(top || side, 'puerta fuera de lugar');
+      }
+      eq(new Set(g.room.doors.map((d) => d.x + ',' + d.y)).size, g.room.doors.length, 'dos puertas en el mismo lugar');
+    }
+  });
 
   test(
     'Simulación: misma semilla => misma partida',

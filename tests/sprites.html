@@ -48,6 +48,9 @@
     if (!q.has('hdonly')) r.appendChild(big(lo, Z * 2));
     r.appendChild(big(hi, Z));
     d.appendChild(r);
+    // transformaciones: definitiva (personajes) y fases (jefes)
+    if (t === 'p' && P.ULT_LOOKS[k]) r.appendChild(big(P.playerSprite(k, frame, false, 'ult'), Z));
+    if (t === 'e' && P.PHASE_LOOKS[k]) P.PHASE_LOOKS[k].forEach((_, i) => r.appendChild(big(P.enemySprite({ id: k, name, st: { phase: i + 1 } }, frame, false), Z)));
     d.insertAdjacentHTML('beforeend', '<small>' + k + '</small>');
     document.getElementById('g').appendChild(d);
   }

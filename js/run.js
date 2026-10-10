@@ -19,6 +19,8 @@
       unlockedRelics: opts.unlockedRelics || [],
       map: BC.MapGen.generateMap(seed, data, BC.Stats.worldMods(opts.ascension || 0, opts.metaLevels || {}, data), !!opts.includeSecret),
       secret: !!opts.includeSecret,
+      endless: !!opts.endless, // modo infinito: después del último jefe empieza otro ciclo más difícil
+      loop: 0,
       realmIndex: 0,
       floorIndex: 0,
       nodeId: null,

@@ -156,7 +156,7 @@
     // ---------- atrás de todo: alas ----------
     if (look.wings) {
       const wc = look.wings;
-      const angel = look.halo || wc === '#ffffff';
+      const angel = look.angelWings || look.halo || wc === '#ffffff';
       for (const side of [-1, 1]) {
         const sx = side < 0 ? 7 : 16; // hombro
         const out = side < 0 ? -7 : 30;
@@ -799,18 +799,68 @@
     return EXTRA[id] ? Object.assign({}, look, EXTRA[id]) : look;
   }
 
+  // ---------------------------------------------------------------------
+  // TRANSFORMACIONES: cómo cambia cada personaje con su definitiva y cada
+  // jefe en cada fase (se suman al aspecto normal)
+  // ---------------------------------------------------------------------
+  const ULT_LOOKS = {
+    // Modo Demonio: ropa negra, cuernos, ala de demonio y ojos rojos
+    asta: { cloth: '#121216', cape: '#050507', pants: '#0a0a0e', accent: '#600808', horns: '#18181c', wings: '#0c0c10', eyes: '#ff2020', skin: '#d8b8a0', headband: '#600808' },
+    // Sylph: viento verde, alas de luz y ojos que brillan
+    yuno: { cape: '#c4fff0', cloth: '#2c8a74', accent: '#7fe0c8', wings: '#d8fff4', angelWings: true, eyes: '#5affc8', book: '#2a8a6a' },
+    // Armadura Valquiria: vestido azul de agua, tiara y alas
+    noelle: { cloth: '#3a78c8', accent: '#bfe9ff', crown: '#bfe9ff', cape: '#8fd3ff', wings: '#cfeeff', angelWings: true, eyes: '#ff5ad0' },
+    // Zona de Maná: todo se vuelve dorado
+    mago: { cloth: '#8a7a30', hat: '#c8a040', accent: '#fff0a0', halo: '#ffe58a', gem: '#ffffff', eyes: '#ffd23a' },
+  };
+  const PHASE_LOOKS = {
+    // Cuarta Bestia: Desesperación
+    vetto: [{ hair: '#3a1a0a', skin: '#b07040', cloth: '#3a2010', outfit: 'rags', accent: '#ff5020', eyes: '#ff2020', horns: '#f2ead8', fierce: true }],
+    // Maldición de Megicula / Megicula despierta
+    vanica: [
+      { cloth: '#14000a', accent: '#ff0040', horns: '#000000', eyes: '#ff0040', fierce: true },
+      { cloth: '#0a0005', accent: '#ff2060', hair: '#60000c', horns: '#000000', wings: '#1a0008', skin: '#d8b8c8', eyes: '#ffffff', fierce: true },
+    ],
+    // Armadura de Cristal
+    mars: [{ hairStyle: 'helmet', helmet: '#a6f4ff', crest: '#ffffff', cloth: '#7ff3ff', accent: '#e0ffff', outfit: 'armor', eyes: '#ffffff' }],
+    // Magia Espacial de Zagred
+    zenon: [{ cloth: '#3a3048', accent: '#b28cff', horns: '#1a1a1a', wings: '#2a1a3a', eyes: '#ff2020', fierce: true }],
+    // Gravedad de Lucifero (después se transforma en Lucifero)
+    dante: [{ cloth: '#2a0a3a', accent: '#ff40a0', cape: '#000000', eyes: '#ff40ff', horns: '#3a1a4a', fierce: true }],
+    // Magia del Tiempo (después se transforma en Paladín Supremo)
+    lucius: [{ halo: '#a0e0ff', accent: '#80c0ff', book: '#80c0ff', eyes: '#4080ff', cloth: '#e8f0ff' }],
+  };
+
   // los de antes quedan guardados (para comparar en tests/sprites.html)
   P.playerSpriteLo = P.playerSprite;
   P.enemySpriteLo = P.enemySprite;
-  P.playerSprite = function (chId, frame, flip) {
+  // form = 'ult' mientras la definitiva está activa
+  P.playerSprite = function (chId, frame, flip, form) {
     const id = P.LOOKS[chId] ? chId : 'mago';
-    return actorSprite('p:' + id, withExtra(id, P.LOOKS[id]), frame, flip);
+    let look = withExtra(id, P.LOOKS[id]);
+    let key = 'p:' + id;
+    if (form === 'ult' && ULT_LOOKS[id]) {
+      look = Object.assign({}, look, ULT_LOOKS[id]);
+      key += ':ult';
+    }
+    return actorSprite(key, look, frame, flip);
   };
   P.enemySprite = function (e, frame, flip) {
     const key = P.enemyLookKey(e);
     if (!key) return null;
-    return actorSprite('e:' + key, withExtra(key, P.ENEMY_LOOKS[key]), frame, flip);
+    let look = withExtra(key, P.ENEMY_LOOKS[key]);
+    let k = 'e:' + key;
+    const ph = (e.st && e.st.phase) || 0;
+    const list = PHASE_LOOKS[key];
+    if (ph > 0 && list) {
+      const i = Math.min(ph, list.length) - 1;
+      look = Object.assign({}, look, list[i]);
+      k += ':f' + (i + 1);
+    }
+    return actorSprite(k, look, frame, flip);
   };
+  P.ULT_LOOKS = ULT_LOOKS;
+  P.PHASE_LOOKS = PHASE_LOOKS;
 
   // =====================================================================
   // ESCENARIO EN HD: pisos, paredes, adornos e íconos
@@ -1226,6 +1276,18 @@
         g.line(x0 + s * 8, 13, x0 + s * 12, 9, '#a07a30');
         g.rect(Math.min(x0 + s * 12, x0 + s * 13), 13, Math.max(x0 + s * 12, x0 + s * 13), 14, '#6a4a2a');
       }
+    }],
+    ambush: [16, 16, (g) => {
+      // dos dagas cruzadas sobre un ojo rojo (te están esperando)
+      g.line(2, 2, 13, 13, '#e8ecf0');
+      g.line(13, 2, 2, 13, '#e8ecf0');
+      g.line(3, 2, 14, 13, '#a0a8b8');
+      g.line(14, 2, 3, 13, '#a0a8b8');
+      g.rect(1, 12, 3, 14, '#6a4a2a');
+      g.rect(12, 12, 14, 14, '#6a4a2a');
+      g.poly([[3, 8], [8, 5], [13, 8], [8, 11]], '#f4f0e8');
+      g.ellipse(8, 8, 2, 2, '#e03030');
+      g.set(8, 8, '#1a0a0a');
     }],
     elite: [14, 14, (g) => {
       g.ball(7, 6, 6, 5.5, '#f0eadc');

@@ -164,7 +164,7 @@
       const g = new BC.Game({ headless: true, save: opts.save });
       g.godMode = !!opts.god;
       if (opts.botSkill !== undefined) g.botSkill = opts.botSkill;
-      g.startRun({ characterId: opts.characterId, seed: opts.seed, ascension: opts.ascension || 0 });
+      g.startRun({ characterId: opts.characterId, seed: opts.seed, ascension: opts.ascension || 0, endless: !!opts.endless });
       const dt = opts.dt || 1 / 30;
       const maxTime = opts.maxTime || 3600;
       let t = 0;
@@ -173,6 +173,7 @@
       let roomStart = 0;
       let guard = 0;
       while (!g.run.over && t < maxTime && guard++ < 5e6) {
+        if (opts.untilLoop && g.run.loop >= opts.untilLoop && g.run.nodeId && g.run.nodeId.indexOf('L' + opts.untilLoop + '-') === 0) break;
         if (g.run.nodeId !== lastNode) {
           if (lastNode) roomLog.push({ node: lastNode, time: t - roomStart, hp: Math.round(g.run.hp) });
           lastNode = g.run.nodeId;

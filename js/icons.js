@@ -1140,6 +1140,15 @@
       g.ellipse(8, 8, 1.6, 1.6, '#1a1a2a');
       g.set(7, 6, '#ffffff');
     },
+    '♾': (g) => {
+      // infinito dorado
+      for (let t = 0; t < Math.PI * 2; t += 0.04) {
+        const x = 8 + Math.sin(t) * 6.5;
+        const y = 8 + Math.sin(t) * Math.cos(t) * 4.5;
+        g.rect(Math.round(x), Math.round(y), Math.round(x), Math.round(y) + 1, t < Math.PI ? '#ffd23a' : '#e8a820');
+      }
+      g.set(4, 6, '#fff0a0');
+    },
     '⚠': (g) => {
       g.poly([[8, 0], [16, 15], [0, 15]], '#ffc21a');
       g.rect(7, 5, 8, 10, '#2a2a30');

@@ -45,7 +45,7 @@
   }
 
   // Multiplicadores de los enemigos según reino, sala y ascensión
-  function enemyScaling(realmIndex, floor, ascMods, data, isBoss) {
+  function enemyScaling(realmIndex, floor, ascMods, data, isBoss, loop) {
     const realm = data.realms[realmIndex];
     const d = data.difficulty;
     const a = ascMods || {};
@@ -53,7 +53,29 @@
     if (isBoss) hp *= 1 + (a.bossHpPct || 0);
     // Los jefes ya tienen su daño definido en data.js; sólo les afecta la ascensión
     const dmg = (isBoss ? 1 : realm.dmgMult * (1 + d.dmgPerFloor * floor)) * (1 + (a.enemyDmgPct || 0));
-    const speed = 1 + (a.enemySpeedPct || 0);
+    let speed = 1 + (a.enemySpeedPct || 0);
+    // modo infinito: desde el ciclo 2 todos los reinos parten de la dificultad del ÚLTIMO
+    // reino (y su jefe), multiplicada por cada ciclo y un poco más en cada reino del ciclo.
+    const L = loop || 0;
+    const en = data.endless;
+    if (L > 0 && en) {
+      const realms = data.realms.filter((r) => !r.secret);
+      const last = realms[realms.length - 1];
+      const step = Math.min(realmIndex, realms.length - 1);
+      const loopHp = Math.pow(en.hpPerLoop, L - 1) * (1 + en.realmHpStep * step);
+      const loopDmg = Math.pow(en.dmgPerLoop, L - 1) * (1 + en.realmDmgStep * step);
+      let baseHp = last.hpMult * (1 + d.hpPerFloor * floor);
+      let baseDmg = last.dmgMult * (1 + d.dmgPerFloor * floor);
+      if (isBoss) {
+        // el jefe de este reino queda tan fuerte como el último jefe
+        const thisBoss = data.bosses[realm.boss];
+        const lastBoss = data.bosses[last.boss];
+        baseHp = lastBoss.hp / thisBoss.hp;
+        baseDmg = lastBoss.damage / thisBoss.damage;
+      }
+      hp = baseHp * loopHp * (1 + (a.enemyHpPct || 0)) * (isBoss ? 1 + (a.bossHpPct || 0) : 1);
+      return { hp, dmg: baseDmg * loopDmg * (1 + (a.enemyDmgPct || 0)), speed: speed * (1 + en.speedPerLoop * L) };
+    }
     return { hp, dmg, speed };
   }
 

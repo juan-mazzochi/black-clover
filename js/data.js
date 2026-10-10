@@ -1572,12 +1572,18 @@
     // ---------------------------------------------------------
     rooms: {
       combat: { name: 'Combate', icon: '⚔️', color: '#d9534f', weight: 62, desc: 'Oleadas de enemigos. Ganás experiencia.' },
+      // combate más duro: oleadas 50% más grandes, pero al terminar aparece un cofre
+      ambush: { name: 'Emboscada', icon: '🗡️', color: '#e07a2a', weight: 24, minFloor: 1, sizeMult: 1.5, desc: 'Muchos más enemigos... y un cofre al final.' },
       elite: { name: 'Élite', icon: '💀', color: '#b04ad9', weight: 9, minFloor: 2, maxPerRealm: 2, desc: 'Un Ojo del Sol de Medianoche. Recompensa: una reliquia.' },
       shop: { name: 'Tienda', icon: '🛒', color: '#e0b84a', weight: 11, minFloor: 1, maxPerRealm: 1, desc: 'Gastá tus yules.' },
       event: { name: 'Evento', icon: '❓', color: '#4aa3d9', weight: 10, minFloor: 1, maxPerRealm: 2, desc: 'Algo inesperado...' },
       rest: { name: 'Descanso', icon: '🔥', color: '#5cc26a', weight: 6, minFloor: 2, maxPerRealm: 1, desc: 'Curate o entrená.' },
       boss: { name: 'Jefe', icon: '👹', color: '#ff2b2b', desc: '¡El jefe del reino!' },
     },
+    // MODO INFINITO (se desbloquea al ganar una vez). Cada ciclo = los 5 reinos otra vez:
+    // vida x hpPerLoop, daño x dmgPerLoop, +velocidad, oleadas más grandes y balas más rápidas.
+    endless: { hpPerLoop: 2.2, dmgPerLoop: 1.6, realmHpStep: 0.25, realmDmgStep: 0.12, speedPerLoop: 0.07, wavePerLoop: 0.25, bulletPerLoop: 0.1, healPctPerLoop: 0.5, starsPerLoop: 20 },
+
     mapgen: {
       choicesMin: 2,
       choicesMax: 3,

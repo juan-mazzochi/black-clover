@@ -946,7 +946,7 @@
       ctx.stroke();
       if (STYLE.pixel && BC.Pixel) {
         // retrato en pixel art
-        const spr = BC.Pixel.playerSprite(ch.id, 0, false);
+        const spr = BC.Pixel.playerSprite(ch.id, 0, false, p.ult.active ? 'ult' : null);
         ctx.save();
         ctx.imageSmoothingEnabled = false;
         ctx.beginPath();
@@ -1030,7 +1030,8 @@
         if (cur) drawEmoji(ctx, g.data.rooms[g.room.node.type].icon, x, 42, 13);
         else if (i === floors.length - 1) drawEmoji(ctx, '👹', x, 42, 11, 0.7);
       }
-      text(ctx, (g.data.realms[run.realmIndex].secret ? 'Reino secreto' : 'Reino ' + (run.realmIndex + 1) + '/' + run.map.realms.length), cx, 61, 10, '#aaa', 'center', 'bold');
+      const realmTxt = g.data.realms[run.realmIndex].secret ? 'Reino secreto' : 'Reino ' + (run.realmIndex + 1) + '/' + run.map.realms.length;
+      text(ctx, (run.endless ? '♾ Ciclo ' + (run.loop + 1) + ' · ' : '') + realmTxt, cx, 61, 10, run.endless && run.loop > 0 ? '#ff9a7a' : '#aaa', 'center', 'bold');
 
       // derecha
       ctx.save();

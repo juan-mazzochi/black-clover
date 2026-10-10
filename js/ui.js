@@ -144,6 +144,13 @@
           <div class="row opts">
             <label>Semilla (opcional): <input id="seed" maxlength="16" placeholder="al azar" autocomplete="off"></label>
             ${s.maxAscension > 0 ? `<label>Dificultad: <select id="asc">${ascOpts}</select></label>` : ''}
+            ${
+              s.stats.wins > 0
+                ? `<label class="endless" title="Después del último jefe los reinos vuelven a empezar, cada vez más difíciles"><input type="checkbox" id="endless"${this.endless ? ' checked' : ''}> ♾ Modo infinito${
+                    s.stats.bestEndless ? ` <small>(récord: ciclo ${s.stats.bestEndless.loop + 1}, ${esc(D.realms[s.stats.bestEndless.realm].name)})</small>` : ''
+                  }</label>`
+                : ''
+            }
           </div>
           <div class="row">
             <button class="btn" data-act="menu">← Volver</button>
@@ -578,8 +585,9 @@
       this.show(
         'runEnd',
         `<div class="panel">
-          <div class="ic huge center">${won ? '👑' : '💀'}</div>
-          <h2>${won ? '¡VICTORIA!' : 'Derrota'}</h2>
+          <div class="ic huge center">${won ? '👑' : summary.endless ? '♾' : '💀'}</div>
+          <h2>${won ? '¡VICTORIA!' : summary.endless ? 'Modo infinito' : 'Derrota'}</h2>
+          ${summary.endless ? `<p class="center"><b>Llegaste al ciclo ${summary.loop + 1}</b> — ${esc(D.realms[summary.realmReached].name)}, sala ${summary.floorReached + 1}${result.newEndlessRecord ? ' · <b>¡Nuevo récord!</b>' : ''}</p>` : ''}
           <p class="story center">"${esc(won ? ch.quotes.win : ch.quotes.death)}" — ${esc(ch.name)}</p>
           <div class="statsgrid">
             <div>Llegaste a <b>${esc(D.realms[summary.realmReached].name)}</b></div>
@@ -591,7 +599,7 @@
             <div>Nivel alcanzado <b>${summary.level || 1}</b></div>
           </div>
           <div class="stars big">+${result.stars} ⭐</div>
-          <ul class="results">${unlocks}${result.newAscension ? '<li>🏅 ¡Desbloqueaste el Rango ' + result.save.maxAscension + '!</li>' : ''}${(result.newAchievements || []).map((a) => `<li>🏆 Logro: <b>${a.icon} ${esc(a.name)}</b> (+${a.stars} ⭐)</li>`).join('')}${result.newSecret ? '<li>👁️ <b>¡Se desbloqueó el REINO SECRETO!</b> Aparecerá después de Dante.</li>' : ''}</ul>
+          <ul class="results">${unlocks}${result.newAscension ? '<li>🏅 ¡Desbloqueaste el Rango ' + result.save.maxAscension + '!</li>' : ''}${(result.newAchievements || []).map((a) => `<li>🏆 Logro: <b>${a.icon} ${esc(a.name)}</b> (+${a.stars} ⭐)</li>`).join('')}${result.newSecret ? '<li>👁️ <b>¡Se desbloqueó el REINO SECRETO!</b> Aparecerá después de Dante.</li>' : ''}${result.newEndless ? '<li>♾ <b>¡Desbloqueaste el MODO INFINITO!</b> Activalo al elegir personaje.</li>' : ''}</ul>
           <div class="sub center">Semilla: ${esc(summary.seed)}</div>
           <div class="row">
             <button class="btn gold" data-act="play" data-focus>Jugar otra vez</button>
@@ -670,7 +678,9 @@
           const seedEl = document.getElementById('seed');
           const ascEl = document.getElementById('asc');
           const seed = seedEl && seedEl.value.trim() ? seedEl.value.trim().toUpperCase() : null;
-          return app.startRun({ characterId: this.sel, seed, ascension: ascEl ? Number(ascEl.value) : 0 });
+          const endEl = document.getElementById('endless');
+          this.endless = !!(endEl && endEl.checked); // se recuerda para la próxima
+          return app.startRun({ characterId: this.sel, seed, ascension: ascEl ? Number(ascEl.value) : 0, endless: this.endless });
         }
         case 'closeChest':
           this.hide();

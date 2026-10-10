@@ -23,8 +23,10 @@
   }
 
   // includeSecret: agrega el reino secreto (si está desbloqueado)
-  function generateMap(seed, data, ascension, includeSecret) {
-    const rng = new BC.RNG(seed + ':map');
+  // loop: número de ciclo del modo infinito (0 = la partida normal)
+  function generateMap(seed, data, ascension, includeSecret, loop) {
+    const L = loop || 0;
+    const rng = new BC.RNG(seed + ':map' + (L ? ':L' + L : ''));
     const asc = BC.Stats.resolveMods(ascension, data);
     const mg = data.mapgen;
     const realms = [];
@@ -46,22 +48,22 @@
           // Una sala especial no se repite en el piso siguiente (podrías volver a entrar a la
           // misma que acabás de terminar), y antes de la sala previa al jefe no aparecen
           // las que ya trae esa sala (descanso / tienda).
-          const banned = prev.filter((t) => t !== 'combat');
+          const banned = prev.filter((t) => t !== 'combat' && t !== 'ambush'); // las peleas sí pueden seguir
           if (f === F - 3) banned.push(...mg.preBossChoices);
           for (let i = 0; i < k; i++) {
+            // nunca dos puertas iguales (tampoco dos de combate)
             const pool = Object.keys(data.rooms)
-              // el combate se puede repetir (cada puerta tiene enemigos distintos); las especiales no
-              .filter((t) => (t === 'combat' || types.indexOf(t) === -1) && banned.indexOf(t) === -1)
+              .filter((t) => types.indexOf(t) === -1 && banned.indexOf(t) === -1)
               .map((t) => ({ t, w: roomWeight(t, f, counts, data, asc) }));
             const pick = rng.weighted(pool, (p) => p.w);
             if (!pick) break;
             types.push(pick.t);
           }
           // Siempre tiene que haber al menos una sala de pelea para elegir
-          if (!types.some((t) => t === 'combat' || t === 'elite')) types[0] = 'combat';
+          if (!types.some((t) => t === 'combat' || t === 'elite' || t === 'ambush')) types[0] = 'combat';
           types.forEach((t) => (counts[t] = (counts[t] || 0) + 1));
         }
-        floors.push(types.map((type, i) => ({ id: r + '-' + f + '-' + i, type, realm: r, floor: f, index: i })));
+        floors.push(types.map((type, i) => ({ id: (L ? 'L' + L + '-' : '') + r + '-' + f + '-' + i, type, realm: r, floor: f, index: i, loop: L })));
         prev = types;
       }
       realms.push({ realmId: realm.id, floors });
@@ -96,7 +98,8 @@
     if (node.floor >= d.lateEnemiesFromFloor && realm.lateEnemies) {
       for (const id in realm.lateEnemies) pool.push({ id, w: realm.lateEnemies[id] });
     }
-    const sizeMult = 1 + (asc.waveSizePct || 0);
+    // en el modo infinito, cada ciclo trae oleadas más grandes
+    const sizeMult = (data.rooms[node.type].sizeMult || 1) * (1 + (asc.waveSizePct || 0)) * (1 + (data.endless ? data.endless.wavePerLoop : 0) * (node.loop || 0));
 
     if (node.type === 'elite') {
       const elite = rng.pick(realm.elites);

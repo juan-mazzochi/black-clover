@@ -103,6 +103,14 @@ Además de los que persiguen y disparan, hay enemigos que obligan a jugar distin
 
 **Dificultad:** las balas enemigas son un 35% más rápidas, las definitivas tardan más en cargarse (sobre todo el Modo Demonio de Asta) y cada nivel pide más experiencia. Todo eso se ajusta en `js/data.js` (`xp`, `enemyProjectileSpeed` y los `gainPer...` de cada definitiva).
 
+## ♾ Modo infinito
+
+Se desbloquea al ganar el juego una vez: aparece una casilla **♾ Modo infinito** al elegir personaje. Después de vencer al último jefe los 5 reinos vuelven a empezar (un **ciclo** nuevo) y te curás la mitad de la vida. Cada ciclo arranca tan difícil como el final del anterior y sigue subiendo: más vida, más daño, enemigos más rápidos, oleadas más grandes y balas más veloces. Hacia el ciclo 4 o 5 es casi imposible. Se guarda tu récord y cada ciclo completado da 20 ⭐ extra. Los números están en `endless` dentro de `js/data.js`.
+
+**Puertas:** al terminar una sala nunca hay dos opciones iguales. Las puertas aparecen arriba, a la izquierda o a la derecha (siempre en el centro de esa pared), y el lugar cambia de sala en sala. Hay un tipo de sala nuevo, **🗡 Emboscada**: muchos más enemigos, pero al final aparece un cofre.
+
+**Transformaciones:** con la definitiva activa cada personaje cambia de aspecto (Asta con cuernos y ala de demonio, Yuno con alas de viento, Noelle con la armadura Valquiria, el Caballero Novato en dorado). Los jefes también cambian en cada fase y tienen un aura que late.
+
 ## ⭐ Progreso entre partidas
 
 - Al terminar una partida (ganes o pierdas) ganás **estrellas**. Las mejoras tienen muchos niveles: completarlas lleva bastantes partidas.
