@@ -1,7 +1,9 @@
 /*
  * Dibujo en PIXEL ART. El mundo (piso, enemigos, ataques, efectos) se dibuja en un
- * lienzo de 320 x 180 y se agranda x4 sin suavizar. Los textos y la interfaz de
- * arriba se dibujan después en alta resolución para que se lean bien.
+ * lienzo de 320 x 180 "píxeles grandes" y se agranda x4 sin suavizar. Ese lienzo
+ * en realidad mide el doble (640 x 360): así los sprites HD de js/pixel-hd.js
+ * muestran todo su detalle, y lo demás se dibuja igual que antes con escala x2.
+ * Los textos y la interfaz de arriba se dibujan después en alta resolución.
  */
 (function (root) {
   const BC = (root.BC = root.BC || {});
@@ -9,6 +11,9 @@
   const TAU = Math.PI * 2;
   const S = P.SCALE;
   const q = (v) => Math.round(v / S);
+  const HD = P.HD || 1;
+  // posición de un sprite: si es HD puede caer en medio píxel grande
+  const qh = (v) => Math.round((v / S) * HD) / HD;
 
   const ULT_RING = { asta: '#c41e1e', yuno: '#7fe0c8', noelle: '#bfe9ff', mago: '#ffe58a' };
   const ROOM_ICON = { combat: 'combat', elite: 'elite', shop: 'shop', event: 'event', rest: 'rest', boss: 'boss' };
@@ -18,7 +23,7 @@
   proto.ensureLo = function () {
     if (this.lo) return;
     const d = this.game.data.config;
-    this.lo = P.makeCanvas(d.width / S, d.height / S);
+    this.lo = P.makeCanvas((d.width / S) * HD, (d.height / S) * HD);
     this.lctx = this.lo.getContext('2d');
     this.lctx.imageSmoothingEnabled = false;
     this.lastPos = new Map(); // para saber si un enemigo se está moviendo (animación)
@@ -34,6 +39,7 @@
     L.setTransform(1, 0, 0, 1, 0, 0);
     L.globalAlpha = 1;
     L.clearRect(0, 0, this.lo.width, this.lo.height);
+    L.setTransform(HD, 0, 0, HD, 0, 0);
 
     this.pxBackground(realm);
     this.pxDoors();
@@ -85,8 +91,13 @@
       const c = P.makeCanvas(this.lo.width, this.lo.height);
       const x = c.getContext('2d');
       x.imageSmoothingEnabled = false;
+      x.setTransform(HD, 0, 0, HD, 0, 0);
       // paredes de ladrillo
-      x.fillStyle = x.createPattern(P.wallTile(realm), 'repeat');
+      // ladrillos (los HD se achican a la mitad para que midan lo mismo que antes)
+      const wt = P.wallTile(realm);
+      const wallPat = x.createPattern(wt, 'repeat');
+      if (wt.hd && wallPat.setTransform) wallPat.setTransform(new DOMMatrix().scale(1 / wt.hd));
+      x.fillStyle = wallPat;
       x.fillRect(0, 0, c.width, c.height);
       // piso con baldosas variadas
       const b = g.bounds;
@@ -100,7 +111,10 @@
           // baldosa al azar (fija por posición); la especial sale ~7% de las veces
           const r = P.hash(tx >> 4, ty >> 4);
           const h = r < 0.07 ? 5 : Math.floor((r - 0.07) / 0.93 * 5);
-          x.drawImage(tiles[h], 0, 0, Math.min(16, x2 - tx), Math.min(16, y2 - ty), tx, ty, Math.min(16, x2 - tx), Math.min(16, y2 - ty));
+          const tw = Math.min(16, x2 - tx);
+          const th = Math.min(16, y2 - ty);
+          const k = tiles[h].hd || 1; // las baldosas HD tienen el doble de píxeles
+          x.drawImage(tiles[h], 0, 0, tw * k, th * k, tx, ty, tw, th);
         }
       }
       // sombra donde el piso toca la pared
@@ -117,12 +131,12 @@
       for (const dc of g.room.decos) {
         const spr = P.deco(dc.icon);
         x.globalAlpha = 0.85;
-        x.drawImage(spr, q(dc.x) - (spr.width >> 1), q(dc.y) - spr.height);
+        P.blit(x, spr, Math.round(q(dc.x) - P.dw(spr) / 2), q(dc.y) - P.dh(spr));
       }
       x.globalAlpha = 1;
       this.pxBg = c;
     }
-    this.lctx.drawImage(this.pxBg, 0, 0);
+    this.lctx.drawImage(this.pxBg, 0, 0, this.pxBg.width / HD, this.pxBg.height / HD);
   };
 
   // ---------------- puertas ----------------
@@ -148,7 +162,7 @@
         L.fillRect(x, y, w, 1);
       }
       const ic = P.icon(ROOM_ICON[dr.node.type] || 'event');
-      if (ic) L.drawImage(ic, x + ((w - ic.width) >> 1), y + ((h - ic.height) >> 1));
+      if (ic) P.blit(L, ic, x + Math.round((w - P.dw(ic)) / 2), y + Math.round((h - P.dh(ic)) / 2));
     }
   };
 
@@ -181,8 +195,10 @@
     const L = this.lctx;
     const bob = Math.floor(g.time * 2) % 2;
     L.fillStyle = 'rgba(0,0,0,0.35)';
-    L.fillRect(q(n.x) - ic.width, q(n.y) + ic.height, ic.width * 2, 2);
-    L.drawImage(ic, q(n.x) - ic.width, q(n.y) - ic.height + bob, ic.width * 2, ic.height * 2);
+    const iw = P.dw(ic);
+    const ih = P.dh(ic);
+    L.fillRect(q(n.x) - iw, q(n.y) + ih, iw * 2, 2);
+    L.drawImage(ic, q(n.x) - iw, q(n.y) - ih + bob, iw * 2, ih * 2);
   };
 
   // ---------------- círculos y zonas ----------------
@@ -311,7 +327,7 @@
       const spr = P.enemySprite({ id: s.id, name: def.name }, 0, false);
       if (spr) {
         L.globalAlpha = 0.25 + 0.6 * k;
-        L.drawImage(spr, q(s.x) - (spr.width >> 1), q(s.y) - spr.height + Math.round(r));
+        P.blit(L, spr, qh(s.x) - P.dw(spr) / 2, q(s.y) - P.dh(spr) + Math.round(r));
         L.globalAlpha = 1;
       }
     }
@@ -325,7 +341,7 @@
       const name = k.kind === 'yul' ? 'coin' : k.kind === 'heart' ? 'heart' : 'chest';
       const ic = P.icon(name);
       if (k.kind === 'chest' && Math.floor(g.time * 5) % 2) ditherCircle(L, q(k.x), q(k.y), 7, '#ffd76a');
-      L.drawImage(ic, q(k.x) - (ic.width >> 1), q(k.y) - (ic.height >> 1) - bob);
+      P.blit(L, ic, Math.round(q(k.x) - P.dw(ic) / 2), Math.round(q(k.y) - P.dh(ic) / 2) - bob);
     }
   };
 
@@ -351,18 +367,20 @@
       L.fillRect(cx - Math.round(e.r / S), feet, Math.round((e.r * 2) / S), 1);
       if (e.boss || e.elite) ditherCircle(L, cx, feet - 1, Math.round(e.r / S) + 1, e.boss ? 'rgba(255,215,106,0.5)' : 'rgba(213,140,255,0.45)');
       if (spr) {
-        const x = cx - (spr.width >> 1);
-        const y = feet - spr.height + 1;
+        const sw = P.dw(spr);
+        const sh = P.dh(spr);
+        const x = qh(e.x) - sw / 2;
+        const y = feet - sh + 1;
         if (e.flash > 0.04) L.filter = 'brightness(1.8)';
-        L.drawImage(spr, x, y);
+        P.blit(L, spr, x, y);
         L.filter = 'none';
         if (e.windup > 0 || e.charging || e.pulling) {
-          if (Math.floor(g.time * 16) % 2) ring(L, cx, feet - (spr.height >> 1), Math.max(spr.width, spr.height) / 2 + 1, e.charging ? '#ffffff' : '#ff3b3b', 1);
+          if (Math.floor(g.time * 16) % 2) ring(L, cx, feet - (sh >> 1), Math.max(sw, sh) / 2 + 1, e.charging ? '#ffffff' : '#ff3b3b', 1);
         }
-        if (e.shield > 0) ring(L, cx, feet - (spr.height >> 1), Math.max(spr.width, spr.height) / 2 + 2, '#bdf8ff', 1);
+        if (e.shield > 0) ring(L, cx, feet - (sh >> 1), Math.max(sw, sh) / 2 + 2, '#bdf8ff', 1);
         if (e.burn) {
           L.fillStyle = Math.floor(g.time * 8) % 2 ? '#ff6a1a' : '#ffe14a';
-          L.fillRect(x + spr.width - 2, y, 2, 2);
+          L.fillRect(x + sw - 2, y, 2, 2);
         }
         if (e.poison) {
           L.fillStyle = '#b36bff';
@@ -370,14 +388,14 @@
         }
         if (e.slowAmt > 0) {
           L.fillStyle = '#5ec8ff';
-          L.fillRect(x + (spr.width >> 1), y - 2, 1, 1);
+          L.fillRect(x + sw / 2, y - 2, 1, 1);
         }
         if (!e.boss && e.hp < e.maxHp) {
-          const w = Math.max(6, spr.width - 2);
+          const w = Math.max(6, Math.round(sw * 0.7));
           L.fillStyle = '#000';
-          L.fillRect(cx - (w >> 1), y - 3, w, 2);
+          L.fillRect(cx - (w >> 1), y - 1, w, 2);
           L.fillStyle = e.elite ? '#d58cff' : '#ff4d4d';
-          L.fillRect(cx - (w >> 1), y - 3, Math.max(1, Math.round(w * (e.hp / e.maxHp))), 2);
+          L.fillRect(cx - (w >> 1), y - 1, Math.max(1, Math.round(w * (e.hp / e.maxHp))), 2);
         }
       } else {
         L.fillStyle = e.color;
@@ -423,7 +441,7 @@
     L.fillStyle = 'rgba(0,0,0,0.4)';
     L.fillRect(cx - 3, feet, 7, 1);
     if (p.hurtFlash > 0) L.filter = 'sepia(1) saturate(6) hue-rotate(-40deg)';
-    L.drawImage(spr, cx - (spr.width >> 1), feet - spr.height + 1);
+    P.blit(L, spr, qh(p.x) - P.dw(spr) / 2, feet - P.dh(spr) + 1);
     L.filter = 'none';
     // mira de dirección
     L.fillStyle = ch.accent;
@@ -439,10 +457,12 @@
       const y = q(pr.y);
       const r = Math.max(1, Math.round(pr.r / S));
       if (pr.owner === 'enemy') {
-        L.fillStyle = pr.color;
-        L.fillRect(x - r, y - r, r * 2 + 1, r * 2 + 1);
-        L.fillStyle = '#ffffff';
-        L.fillRect(x, y, 1, 1);
+        const o = P.orb ? P.orb(pr.color, r) : null;
+        if (o) P.blit(L, o, qh(pr.x) - P.dw(o) / 2, qh(pr.y) - P.dh(o) / 2);
+        else {
+          L.fillStyle = pr.color;
+          L.fillRect(x - r, y - r, r * 2 + 1, r * 2 + 1);
+        }
         continue;
       }
       const a = Math.atan2(pr.vy, pr.vx);
@@ -460,6 +480,9 @@
         line(L, x - cos * 5, y - sin * 5, x + cos * 3, y + sin * 3, pr.color, 1);
         L.fillStyle = '#ffffff';
         L.fillRect(Math.round(x + cos * 3), Math.round(y + sin * 3), 1, 1);
+      } else if (P.orb && P.orb(pr.color, r)) {
+        const o = P.orb(pr.color, r);
+        P.blit(L, o, qh(pr.x) - P.dw(o) / 2, qh(pr.y) - P.dh(o) / 2);
       } else {
         L.fillStyle = pr.color;
         L.fillRect(x - r, y - r, r * 2, r * 2);

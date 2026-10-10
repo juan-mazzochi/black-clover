@@ -893,7 +893,12 @@
         ctx.beginPath();
         ctx.arc(38, 33, 22, 0, TAU);
         ctx.clip();
-        ctx.drawImage(spr, 0, 0, spr.width, 12, 38 - spr.width * 1.5, 13, spr.width * 3, 36);
+        // sólo la cabeza, agrandada x3 (los sprites HD tienen el doble de píxeles)
+        const hd = spr.hd || 1;
+        const cropH = hd > 1 ? Math.round(spr.height * 0.6) : 12;
+        const dw = (spr.width / hd) * 3;
+        const dh = (cropH / hd) * 3;
+        ctx.drawImage(spr, 0, 0, spr.width, cropH, 38 - dw / 2, hd > 1 ? 4 : 13, dw, dh);
         ctx.restore();
       } else drawEmoji(ctx, ch.icon, 38, 33, 24);
       // nivel y experiencia

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Sprites: antes y ahora</title>
+<style>
+  body { background: #2a2433; color: #eee; font: 14px sans-serif; margin: 12px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+  .it { background: #3a5a3a; padding: 6px; border-radius: 6px; text-align: center; }
+  .it canvas { image-rendering: pixelated; display: block; margin: 0 auto; }
+  .row { display: flex; gap: 6px; align-items: flex-end; }
+  small { display: block; color: #ccc; }
+</style>
+</head>
+<body>
+<div class="grid" id="g"></div>
+<script src="../js/data.js"></script>
+<script src="../js/rng.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/pixel.js"></script>
+<script src="../js/pixel-hd.js"></script>
+<script>
+  // Muestra cada sprite como era antes (izquierda) y en HD (derecha), al mismo tamaño.
+  // ?only=asta,vetto  -> sólo esos;  ?frame=1 -> cuadro de caminata;  ?z=6 -> zoom
+  const P = BC.Pixel;
+  const q = new URLSearchParams(location.search);
+  const only = q.get('only') ? q.get('only').split(',') : null;
+  const frame = Number(q.get('frame') || 0);
+  const Z = Number(q.get('z') || 4);
+  const ids = [...Object.keys(P.LOOKS).map((k) => ['p', k]), ...Object.keys(P.ENEMY_LOOKS).map((k) => ['e', k])].filter(([, k]) => !only || only.includes(k));
+  const big = (spr, zoom) => {
+    const c = document.createElement('canvas');
+    c.width = spr.width * zoom;
+    c.height = spr.height * zoom;
+    const x = c.getContext('2d');
+    x.imageSmoothingEnabled = false;
+    x.drawImage(spr, 0, 0, c.width, c.height);
+    return c;
+  };
+  for (const [t, k] of ids) {
+    const name = k === 'lucifero' ? 'Lucifero' : k === 'luciusPaladin' ? 'Lucius (Paladín Supremo)' : k;
+    const lo = t === 'p' ? P.playerSpriteLo(k, frame, false) : P.enemySpriteLo({ id: k, name }, frame, false);
+    const hi = t === 'p' ? P.playerSprite(k, frame, false) : P.enemySprite({ id: k, name }, frame, false);
+    const d = document.createElement('div');
+    d.className = 'it';
+    const r = document.createElement('div');
+    r.className = 'row';
+    if (!q.has('hdonly')) r.appendChild(big(lo, Z * 2));
+    r.appendChild(big(hi, Z));
+    d.appendChild(r);
+    d.insertAdjacentHTML('beforeend', '<small>' + k + '</small>');
+    document.getElementById('g').appendChild(d);
+  }
+</script>
+</body>
+</html>

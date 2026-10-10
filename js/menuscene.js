@@ -210,7 +210,7 @@
       const bob = Math.floor(t * 2 + px) % 2;
       x.fillStyle = 'rgba(0,0,0,0.35)';
       x.fillRect(px - 4, py, 9, 1);
-      x.drawImage(spr, px - (spr.width >> 1), py - spr.height + 1 - (id === 'asta' ? 0 : bob));
+      P.blit(x, spr, px - P.dw(spr) / 2, py - P.dh(spr) + 1 - (id === 'asta' ? 0 : bob));
     }
   }
 
@@ -241,18 +241,21 @@
   function draw(ctx, t, d) {
     if (!BC.Pixel) return false;
     if (!lo) {
-      lo = BC.Pixel.makeCanvas(W, H);
+      // lienzo al doble de resolución para que los héroes HD se vean con detalle
+      const hd = BC.Pixel.HD || 1;
+      lo = BC.Pixel.makeCanvas(W * hd, H * hd);
       lctx = lo.getContext('2d');
       lctx.imageSmoothingEnabled = false;
+      lctx.setTransform(hd, 0, 0, hd, 0, 0);
     }
     if (!staticLayer) staticLayer = buildStatic();
     lctx.clearRect(0, 0, W, H);
     // primero el cielo (parte de la capa fija), arriba las estrellas y la luna
-    lctx.drawImage(staticLayer.sky, 0, 0);
+    lctx.drawImage(staticLayer.sky, 0, 0, W, H);
     stars(lctx, t);
     moon(lctx);
     clouds(lctx, t);
-    lctx.drawImage(staticLayer.land, 0, 0);
+    lctx.drawImage(staticLayer.land, 0, 0, W, H);
     castleWindows(lctx, t);
     campfire(lctx, t);
     heroes(lctx, t);
