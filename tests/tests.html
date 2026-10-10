@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Tests — Black Clover: La Senda del Rey Mago</title>
+  <style>
+    body { background: #0d0b12; color: #eee; font-family: "Segoe UI", system-ui, sans-serif; padding: 20px 32px; }
+    h1 { color: #ffd76a; }
+    .ok { color: #7dff9a; }
+    .fail { color: #ff7a7a; }
+    pre { background: #22121a; padding: 8px; border-radius: 6px; white-space: pre-wrap; font-size: 12px; }
+    #sum { font-size: 1.3em; font-weight: bold; margin: 12px 0; }
+    li { margin: 3px 0; }
+    label { color: #aaa; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Tests del juego</h1>
+  <p>Esta página revisa que la lógica del juego funcione (semillas, mapa, daño, sinergias, recompensas, guardado y partidas simuladas).</p>
+  <label><input type="checkbox" id="slow" checked> Incluir simulaciones de partidas completas (tarda unos segundos)</label>
+  <button id="run">Ejecutar</button>
+  <div id="sum"></div>
+  <ul id="list"></ul>
+
+  <script src="../js/data.js"></script>
+  <script src="../js/rng.js"></script>
+  <script src="../js/utils.js"></script>
+  <script src="../js/stats.js"></script>
+  <script src="../js/combat.js"></script>
+  <script src="../js/mapgen.js"></script>
+  <script src="../js/run.js"></script>
+  <script src="../js/loot.js"></script>
+  <script src="../js/events.js"></script>
+  <script src="../js/progress.js"></script>
+  <script src="../js/save.js"></script>
+  <script src="../js/entities.js"></script>
+  <script src="../js/skills.js"></script>
+  <script src="../js/enemies.js"></script>
+  <script src="../js/game.js"></script>
+  <script src="../js/bot.js"></script>
+  <script src="../js/pixel.js"></script>
+  <script src="test-cases.js"></script>
+  <script>
+    function runAll() {
+      const list = document.getElementById('list');
+      const sum = document.getElementById('sum');
+      list.innerHTML = '';
+      sum.textContent = 'Ejecutando...';
+      setTimeout(() => {
+        let ok = 0, fail = 0;
+        BCTests.run({
+          skipSlow: !document.getElementById('slow').checked,
+          onResult(r) {
+            const li = document.createElement('li');
+            li.className = r.ok ? 'ok' : 'fail';
+            li.textContent = (r.ok ? '✔ ' : '✘ ') + r.name;
+            if (!r.ok) {
+              const pre = document.createElement('pre');
+              pre.textContent = r.error;
+              li.appendChild(pre);
+            }
+            list.appendChild(li);
+            r.ok ? ok++ : fail++;
+          },
+        });
+        sum.innerHTML = fail ? `<span class="fail">${fail} fallaron</span>, ${ok} pasaron` : `<span class="ok">¡Todo bien! ${ok} tests pasaron</span>`;
+        document.title = 'TESTS ok=' + ok + ' fail=' + fail;
+      }, 50);
+    }
+    document.getElementById('run').onclick = runAll;
+    window.onload = runAll;
+  </script>
+</body>
+</html>
