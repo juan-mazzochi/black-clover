@@ -39,6 +39,10 @@
       rot.id = 'rotate';
       rot.innerHTML = '<div class="r-ic">📱</div><div>Girá el celular<br><small>El juego se juega con el teléfono acostado</small></div>';
       document.body.appendChild(rot);
+      if (BC.PixelIcons) {
+        BC.PixelIcons.replaceIn(el);
+        BC.PixelIcons.replaceIn(rot);
+      }
 
       this.el = el;
       this.stick = el.querySelector('.t-stick');

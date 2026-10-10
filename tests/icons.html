@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Íconos: emoji y pixel art</title>
+<style>
+  body { background: #2a2433; color: #eee; font: 13px sans-serif; margin: 10px; }
+  .grid { display: flex; flex-wrap: wrap; gap: 6px; }
+  .it { background: #3a3448; padding: 4px 6px; border-radius: 6px; display: flex; align-items: center; gap: 6px; }
+  .em { font-size: 30px; line-height: 1; }
+  canvas { image-rendering: pixelated; width: 54px; height: 54px; }
+  .miss { outline: 2px solid #ff4040; }
+</style>
+</head>
+<body>
+<div class="grid" id="g"></div>
+<script src="../js/data.js"></script>
+<script src="../js/rng.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/pixel.js"></script>
+<script src="../js/pixel-hd.js"></script>
+<script src="../js/icons.js"></script>
+<script>
+  // Cada emoji que usa el juego, con su ícono en pixel art al lado (rojo = falta dibujo)
+  const I = BC.PixelIcons;
+  const found = new Set();
+  const scan = (s) => { for (const m of String(s).matchAll(I.RE)) if (!I.KEEP.has(I.strip(m[0]))) found.add(I.strip(m[0])); };
+  const walk = (o) => { if (typeof o === 'string') scan(o); else if (o && typeof o === 'object') for (const k in o) walk(o[k]); };
+  walk(BC.DATA);
+  for (const e of I.list()) found.add(e);
+  const only = new URLSearchParams(location.search).get('big');
+  for (const e of found) {
+    const d = document.createElement('div');
+    d.className = 'it' + (I.has(e) ? '' : ' miss');
+    d.innerHTML = '<span class="em">' + e + '</span>';
+    const c = I.canvas(e);
+    if (c) {
+      const big = document.createElement('canvas');
+      big.width = 54; big.height = 54;
+      const x = big.getContext('2d');
+      x.imageSmoothingEnabled = false;
+      x.drawImage(c, 0, 0, 54, 54);
+      d.appendChild(big);
+    }
+    document.getElementById('g').appendChild(d);
+  }
+</script>
+</body>
+</html>

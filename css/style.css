@@ -471,3 +471,9 @@ body.touch .only-keys { display: none; }
   body.touch #rotate .r-ic { font-size: 64px; animation: rotphone 2s ease-in-out infinite; }
 }
 @keyframes rotphone { 0%, 25% { transform: rotate(0); } 55%, 100% { transform: rotate(-90deg); } }
+
+/* íconos en pixel art que reemplazan a los emojis (js/icons.js) */
+img.pxi { width: 1.2em; height: 1.2em; image-rendering: pixelated; vertical-align: -0.24em; display: inline-block; }
+.ic img.pxi { width: 1.3em; height: 1.3em; vertical-align: -0.2em; }
+.t-btn img.pxi { width: 34px; height: 34px; }
+#rotate img.pxi { width: 72px; height: 72px; }

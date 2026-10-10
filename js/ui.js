@@ -35,6 +35,7 @@
     show(screen, html, cls) {
       this.screen = screen;
       this.el.innerHTML = html;
+      if (BC.PixelIcons) BC.PixelIcons.replaceIn(this.el); // emojis -> pixel art
       this.el.className = 'overlay show ' + (cls || '');
       const f = this.el.querySelector('[data-focus]');
       // foco para el teclado, sin mover la ventana (si no, se corta el título)

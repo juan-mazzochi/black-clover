@@ -1,5 +1,6 @@
 /*
- * Dibujo del juego en el <canvas>. Todo con formas y emojis generados por código.
+ * Dibujo del juego en el <canvas>. Todo con formas generadas por código; los
+ * íconos son dibujos en pixel art de js/icons.js (si falta alguno, se usa el emoji).
  */
 (function (root) {
   const BC = (root.BC = root.BC || {});
@@ -15,6 +16,15 @@
     c = document.createElement('canvas');
     c.width = c.height = Math.ceil(s * 1.4);
     const x = c.getContext('2d');
+    const px = BC.PixelIcons && BC.PixelIcons.canvas(emoji);
+    if (px) {
+      // ícono en pixel art, agrandado sin suavizar
+      const w = Math.round(s * 1.15);
+      x.imageSmoothingEnabled = false;
+      x.drawImage(px, Math.round((c.width - w) / 2), Math.round((c.height - w) / 2), w, w);
+      emojiCache.set(key, c);
+      return c;
+    }
     x.textAlign = 'center';
     x.textBaseline = 'middle';
     x.font = s + 'px "Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-serif';
@@ -70,7 +80,40 @@
     }
   }
 
+  // Texto que puede traer emojis (por ejemplo "💰 120"): los emojis se dibujan
+  // como íconos de pixel art y el resto como letra.
   function text(ctx, str, x, y, size, color, align, weight, stroke) {
+    const I = BC.PixelIcons;
+    str = String(str);
+    if (I && I.RE.test(str)) {
+      I.RE.lastIndex = 0;
+      const parts = [];
+      let last = 0;
+      for (const m of str.matchAll(I.RE)) {
+        if (!I.has(m[0]) || I.KEEP.has(I.strip(m[0]))) continue;
+        if (m.index > last) parts.push({ t: str.slice(last, m.index) });
+        parts.push({ e: m[0] });
+        last = m.index + m[0].length;
+      }
+      I.RE.lastIndex = 0;
+      if (parts.length) {
+        if (last < str.length) parts.push({ t: str.slice(last) });
+        ctx.font = (weight || 'bold') + ' ' + size + 'px ' + STYLE.font;
+        const iw = size * 1.2;
+        const widths = parts.map((p) => (p.e ? iw : ctx.measureText(p.t).width));
+        const total = widths.reduce((a, b) => a + b, 0);
+        let cx = align === 'center' ? x - total / 2 : align === 'right' ? x - total : x;
+        parts.forEach((p, i) => {
+          if (p.e) drawEmoji(ctx, p.e, cx + iw / 2, y, size);
+          else textPlain(ctx, p.t, cx, y, size, color, 'left', weight, stroke);
+          cx += widths[i];
+        });
+        return;
+      }
+    }
+    textPlain(ctx, str, x, y, size, color, align, weight, stroke);
+  }
+  function textPlain(ctx, str, x, y, size, color, align, weight, stroke) {
     ctx.font = (weight || 'bold') + ' ' + size + 'px ' + STYLE.font;
     ctx.textAlign = align || 'left';
     ctx.textBaseline = 'middle';

@@ -215,6 +215,45 @@
     L.arc(x, y, Math.max(1, r), 0, TAU);
     L.stroke();
   }
+  // ---------- trazos con brillo (en HD se ven el doble de finos) ----------
+  // capa ancha y transparente del color + capa del color + centro blanco fino
+  function glowLine(L, x1, y1, x2, y2, color, w) {
+    const ww = Math.max(1, w || 1);
+    L.save();
+    L.lineCap = 'round';
+    L.globalAlpha *= 0.35;
+    line(L, x1, y1, x2, y2, color, ww + 2);
+    L.restore();
+    line(L, x1, y1, x2, y2, color, ww);
+    line(L, x1, y1, x2, y2, '#ffffff', Math.max(0.5, ww / 3));
+  }
+  function glowArc(L, x, y, r, a0, a1, color, w) {
+    const ww = Math.max(1, w || 1);
+    const arc = (rr, c, lw) => {
+      L.strokeStyle = c;
+      L.lineWidth = lw;
+      L.beginPath();
+      L.arc(x, y, Math.max(0.5, rr), a0, a1);
+      L.stroke();
+    };
+    L.save();
+    L.globalAlpha *= 0.3;
+    arc(r, color, ww + 2.5);
+    L.restore();
+    arc(r, color, ww);
+    arc(r - ww * 0.25, '#ffffff', Math.max(0.5, ww / 3));
+  }
+  function glowRing(L, x, y, r, color, w) {
+    glowArc(L, x, y, r, 0, TAU, color, w);
+  }
+  // estrellita de 4 puntas (en píxeles HD)
+  function star4(L, x, y, r, color) {
+    L.fillStyle = color;
+    L.fillRect(x - r / 2, y - 0.25, r, 0.5);
+    L.fillRect(x - 0.25, y - r / 2, 0.5, r);
+    L.fillStyle = '#ffffff';
+    L.fillRect(x - 0.25, y - 0.25, 0.5, 0.5);
+  }
   function line(L, x1, y1, x2, y2, color, w) {
     L.strokeStyle = color;
     L.lineWidth = w || 1;
@@ -254,13 +293,15 @@
           ditherCircle(L, x, y, r, z.color || '#5ec8ff');
           ring(L, x, y, r + (Math.floor(z.t * 6) % 2), z.color || '#bfe9ff', 1);
           break;
-        case 'beam':
+        case 'beam': {
           if (!z.x2) break;
-          line(L, x, y, q(z.x2), q(z.y2), z.color || '#5ec8ff', Math.max(2, z.width / S));
-          line(L, x, y, q(z.x2), q(z.y2), '#ffffff', Math.max(1, z.width / S / 3));
+          // rayo con borde que titila
+          const w = Math.max(2, z.width / S) + (Math.floor(g.time * 20) % 2 ? 0.5 : 0);
+          glowLine(L, x, y, q(z.x2), q(z.y2), z.color || '#5ec8ff', w);
           break;
+        }
         case 'shockwave':
-          ring(L, x, y, (z.radius || 1) / S, z.color || '#5ec8ff', 2);
+          glowRing(L, x, y, (z.radius || 1) / S, z.color || '#5ec8ff', 2);
           break;
         case 'slam':
           if (z.t < z.delay) {
@@ -300,7 +341,7 @@
         }
         case 'nova':
           if (z.radius === undefined) break;
-          ring(L, x, y, z.radius / S, z.color || '#ffffff', 3);
+          glowRing(L, x, y, z.radius / S, z.color || '#ffffff', 3);
           break;
         case 'portal': {
           const k = Math.min(1, z.t / z.delay);
@@ -468,18 +509,30 @@
       const a = Math.atan2(pr.vy, pr.vx);
       const cos = Math.cos(a);
       const sin = Math.sin(a);
+      const fx = pr.x / S;
+      const fy = pr.y / S;
       if (pr.style === 'crescent') {
-        L.strokeStyle = pr.color;
-        L.lineWidth = Math.max(1, r * 0.6);
-        L.beginPath();
-        L.arc(x - cos * r * 0.4, y - sin * r * 0.4, r + 1, a - 1.1, a + 1.1);
-        L.stroke();
+        // media luna cortante con estela
+        glowArc(L, fx - cos * r * 0.4, fy - sin * r * 0.4, r + 1, a - 1.1, a + 1.1, pr.color, Math.max(1, r * 0.5));
+        L.globalAlpha = 0.35;
+        glowArc(L, fx - cos * (r * 0.4 + 2), fy - sin * (r * 0.4 + 2), r + 0.5, a - 0.9, a + 0.9, pr.color, 0.5);
+        L.globalAlpha = 1;
       } else if (pr.style === 'blade') {
-        line(L, x - cos * 2, y - sin * 2, x + cos * 2, y + sin * 2, pr.color, 1);
+        // cuchilla de viento: rayita brillante con estela
+        L.globalAlpha = 0.4;
+        line(L, fx - cos * 6, fy - sin * 6, fx - cos * 2, fy - sin * 2, pr.color, 0.5);
+        L.globalAlpha = 1;
+        glowLine(L, fx - cos * 2.5, fy - sin * 2.5, fx + cos * 2.5, fy + sin * 2.5, pr.color, 1);
       } else if (pr.style === 'spear') {
-        line(L, x - cos * 5, y - sin * 5, x + cos * 3, y + sin * 3, pr.color, 1);
+        glowLine(L, fx - cos * 5, fy - sin * 5, fx + cos * 2, fy + sin * 2, pr.color, 1);
+        // punta en rombo
         L.fillStyle = '#ffffff';
-        L.fillRect(Math.round(x + cos * 3), Math.round(y + sin * 3), 1, 1);
+        L.beginPath();
+        L.moveTo(fx + cos * 4.5, fy + sin * 4.5);
+        L.lineTo(fx + cos * 2 - sin * 1.2, fy + sin * 2 + cos * 1.2);
+        L.lineTo(fx + cos * 2 + sin * 1.2, fy + sin * 2 - cos * 1.2);
+        L.closePath();
+        L.fill();
       } else if (P.orb && P.orb(pr.color, r)) {
         const o = P.orb(pr.color, r);
         P.blit(L, o, qh(pr.x) - P.dw(o) / 2, qh(pr.y) - P.dh(o) / 2);
@@ -502,32 +555,57 @@
       const x = q(f.x);
       const y = q(f.y);
       if (f.type === 'slash') {
-        L.strokeStyle = f.color;
-        L.lineWidth = k < 0.5 ? 2 : 1;
-        L.beginPath();
-        L.arc(x, y, (f.range * (0.75 + 0.25 * k)) / S, f.angle - f.arc / 2, f.angle + f.arc / 2);
-        L.stroke();
+        // tajo: medialuna gruesa que se abre, con filo blanco y una estela atrás
+        const rr = (f.range * (0.75 + 0.25 * k)) / S;
+        const a0 = f.angle - f.arc / 2;
+        const a1 = f.angle + f.arc / 2;
+        const sweep = Math.min(1, k * 2.2); // el corte avanza de un lado al otro
+        const end = a0 + (a1 - a0) * sweep;
+        L.globalAlpha = Math.max(0, 1 - k) * 0.35;
+        glowArc(L, x, y, rr - 2, a0, end, f.color, 1);
+        L.globalAlpha = Math.max(0, 1 - k);
+        glowArc(L, x, y, rr, a0, end, f.color, k < 0.4 ? 2.5 : 1.5);
+        // chispa en la punta del corte
+        if (k < 0.6) star4(L, x + Math.cos(end) * rr, y + Math.sin(end) * rr, 3, f.color);
       } else if (f.type === 'thrust') {
-        line(L, x, y, q(f.x2), q(f.y2), f.color, Math.max(1, f.width / S / 2));
+        glowLine(L, x, y, q(f.x2), q(f.y2), f.color, Math.max(1, f.width / S / 2));
+        if (k < 0.5) star4(L, q(f.x2), q(f.y2), 4, f.color);
       } else if (f.type === 'ring') {
-        ring(L, x, y, (f.r0 + (f.r1 - f.r0) * k) / S, f.color, Math.max(1, Math.round((f.width || 4) / S)));
+        // onda expansiva doble
+        const rr = (f.r0 + (f.r1 - f.r0) * k) / S;
+        glowRing(L, x, y, rr, f.color, Math.max(1, (f.width || 4) / S));
+        L.globalAlpha = Math.max(0, 1 - k) * 0.4;
+        ring(L, x, y, rr * 0.8, f.color, 0.5);
       } else if (f.type === 'burst') {
-        ditherCircle(L, x, y, (f.r * (1 + k * 0.3)) / S, f.color);
-      } else if (f.type === 'lineFlash') {
-        line(L, x, y, q(f.x2), q(f.y2), f.color, Math.max(1, f.width / S));
-      } else if (f.type === 'bolt') {
-        L.strokeStyle = f.color;
-        L.lineWidth = 1;
+        // explosión: tramado + núcleo brillante + rayos
+        const rr = (f.r * (1 + k * 0.3)) / S;
+        ditherCircle(L, x, y, rr, f.color);
+        L.globalAlpha = Math.max(0, 1 - k * 1.5);
+        L.fillStyle = '#ffffff';
         L.beginPath();
-        L.moveTo(x, y);
+        L.arc(x, y, Math.max(0.5, rr * 0.2 * (1 - k)), 0, TAU);
+        L.fill();
+        L.globalAlpha = Math.max(0, 1 - k);
+        ring(L, x, y, rr, '#ffffff', 0.5); // borde brillante
+        for (let i = 0; i < 8; i++) {
+          const a = (i / 8) * TAU + f.t;
+          line(L, x + Math.cos(a) * rr * 0.3, y + Math.sin(a) * rr * 0.3, x + Math.cos(a) * rr * (0.75 + k * 0.4), y + Math.sin(a) * rr * (0.75 + k * 0.4), '#fff4d0', 0.5);
+        }
+      } else if (f.type === 'lineFlash') {
+        glowLine(L, x, y, q(f.x2), q(f.y2), f.color, Math.max(1, f.width / S));
+      } else if (f.type === 'bolt') {
+        // rayo zigzag con ramitas
         const x2 = q(f.x2);
         const y2 = q(f.y2);
-        for (let i = 1; i < 5; i++) L.lineTo(Math.round(x + (x2 - x) * (i / 5) + (Math.random() - 0.5) * 5), Math.round(y + (y2 - y) * (i / 5) + (Math.random() - 0.5) * 5));
-        L.lineTo(x2, y2);
-        L.stroke();
+        const pts = [[x, y]];
+        for (let i = 1; i < 6; i++) pts.push([x + (x2 - x) * (i / 6) + (Math.random() - 0.5) * 6, y + (y2 - y) * (i / 6) + (Math.random() - 0.5) * 6]);
+        pts.push([x2, y2]);
+        for (let i = 0; i < pts.length - 1; i++) glowLine(L, pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1], f.color, 1);
+        const b = pts[2];
+        line(L, b[0], b[1], b[0] + (Math.random() - 0.5) * 10, b[1] + (Math.random() - 0.5) * 10, f.color, 0.5);
+        star4(L, x2, y2, 4, f.color);
       } else if (f.type === 'spark') {
-        L.fillStyle = f.color;
-        L.fillRect(Math.round(x + (q(f.tx) - x) * k), Math.round(y + (q(f.ty) - y) * k), 1, 1);
+        star4(L, x + (q(f.tx) - x) * k, y + (q(f.ty) - y) * k, 2.5, f.color);
       }
     }
     L.globalAlpha = 1;
@@ -536,9 +614,12 @@
   proto.pxParticles = function () {
     const L = this.lctx;
     for (const p of this.game.particles) {
-      L.globalAlpha = Math.max(0, 1 - p.t / p.life);
-      L.fillStyle = p.color;
-      L.fillRect(q(p.x), q(p.y), 1, 1);
+      const k = p.t / p.life;
+      L.globalAlpha = Math.max(0, 1 - k);
+      L.fillStyle = k < 0.25 ? '#ffffff' : p.color;
+      // al principio 1 píxel grande, después medio (en HD)
+      const sz = k < 0.5 && p.size > 3.5 ? 1 : 0.5;
+      L.fillRect(Math.round((p.x / S) * 2) / 2, Math.round((p.y / S) * 2) / 2, sz, sz);
     }
     L.globalAlpha = 1;
   };
