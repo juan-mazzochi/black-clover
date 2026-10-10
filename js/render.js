@@ -273,7 +273,7 @@
       const ctx = this.ctx;
       const t = g.time;
       for (const dr of g.room.doors) {
-        const rd = g.data.rooms[dr.node.type];
+        const rd = g.data.rooms[g.data.rooms[dr.node.type].looksLike || dr.node.type];
         const pulse = 0.5 + 0.5 * Math.sin(t * 4);
         ctx.save();
         ctx.shadowColor = rd.color;

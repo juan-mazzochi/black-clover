@@ -306,7 +306,16 @@
         if (eff.lifesteal > 0 && amt > 0) BC.Run.heal(run, amt * eff.lifesteal);
       }
       const u = p.ch.ultimate;
-      if (u.gainPerDamageDealt && amt > 0) this.addUlt(amt * u.gainPerDamageDealt);
+      if (u.gainPerDamageDealt && amt > 0) {
+        // tope por segundo: con mucho daño (o muchos enemigos) la barra no se llena volando
+        let gain = amt * u.gainPerDamageDealt;
+        if (u.maxDamageGainPerSec) {
+          if (!p.ultWin || this.time - p.ultWin.t >= 1) p.ultWin = { t: this.time, got: 0 };
+          gain = Math.max(0, Math.min(gain, u.maxDamageGainPerSec - p.ultWin.got));
+          p.ultWin.got += gain;
+        }
+        if (gain > 0) this.addUlt(gain);
+      }
       if (amt > 0) this.dmgText(e.x, e.y - e.r, amt, res.crit, opt.color);
       if (e.hp <= 0) this.killEnemy(e);
       return amt;

@@ -60,7 +60,14 @@
             types.push(pick.t);
           }
           // Siempre tiene que haber al menos una sala de pelea para elegir
-          if (!types.some((t) => t === 'combat' || t === 'elite' || t === 'ambush')) types[0] = 'combat';
+          if (!types.some((t) => t === 'combat' || t === 'elite')) types[0] = 'combat';
+          // EMBOSCADA: a veces, junto a una puerta de combate aparece otra igual que es una trampa.
+          // Si quedó una sola puerta, siempre aparece (así hay algo que elegir).
+          const amb = data.rooms.ambush;
+          if (amb && types.indexOf('combat') !== -1 && f >= (amb.minFloor || 0) && types.length < mg.choicesMax && (types.length < 2 || rng.float() < amb.chance)) {
+            // lugar al azar, para que no siempre sea la segunda
+            types.splice(rng.int(0, types.length), 0, 'ambush');
+          }
           types.forEach((t) => (counts[t] = (counts[t] || 0) + 1));
         }
         floors.push(types.map((type, i) => ({ id: (L ? 'L' + L + '-' : '') + r + '-' + f + '-' + i, type, realm: r, floor: f, index: i, loop: L })));

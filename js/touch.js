@@ -94,6 +94,17 @@
       press('.t-ult', (g) => (g.input.ult = true));
       press('.t-pause', () => app.setPaused(true));
 
+      // PANTALLA COMPLETA AUTOMÁTICA: los navegadores sólo la permiten después de un toque,
+      // así que se activa con el primer toque en cualquier parte, y otra vez al empezar
+      // cada partida si se había salido (en el iPhone no existe: hay que "Agregar a inicio").
+      const autoFs = () => {
+        if (BC.Fullscreen.can() && !BC.Fullscreen.is()) BC.Fullscreen.toggle();
+      };
+      document.addEventListener('pointerup', autoFs, { once: true });
+      app.game.on((type) => {
+        if (type === 'runStart') autoFs();
+      });
+
       // que el navegador no haga zoom ni abra menús al mantener apretado
       el.addEventListener('contextmenu', (e) => e.preventDefault());
       window.addEventListener('blur', () => this.releaseStick());

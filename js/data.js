@@ -90,6 +90,7 @@
           gaugeMax: 100,
           gainPerHpLost: 0.55,
           gainPerDamageDealt: 0.008,
+          maxDamageGainPerSec: 0.9, // tope de carga por daño hecho (por segundo)
           gainPerAntimagic: 1.5,
           duration: 8,
           mods: { damagePct: 0.6, speedPct: 0.25, cooldownPct: 0.25, lifesteal: 0.006 },
@@ -135,6 +136,7 @@
           gaugeMax: 100,
           gainPerManaSpent: 0.22,
           gainPerDamageDealt: 0.008,
+          maxDamageGainPerSec: 1.2,
           duration: 9,
           mods: { cooldownPct: 0.4, damagePct: 0.35, speedPct: 0.2 },
           freeMana: true,
@@ -179,6 +181,7 @@
           gaugeMax: 100,
           gainPerSecHighMana: 2.2,
           gainPerDamageDealt: 0.009,
+          maxDamageGainPerSec: 1.2,
           duration: 9,
           mods: { damagePct: 0.5, armor: 6, manaRegenPct: 1.0 },
           empowerBasic: { pierce: 3, damagePct: 0.5 },
@@ -229,6 +232,7 @@
           gaugeMax: 100,
           gainPerManaSpent: 0.16,
           gainPerDamageDealt: 0.009,
+          maxDamageGainPerSec: 1.2,
           duration: 8,
           mods: { damagePct: 0.4, cooldownPct: 0.35, manaRegenPct: 2.0 },
           slowRadius: 220,
@@ -1573,7 +1577,8 @@
     rooms: {
       combat: { name: 'Combate', icon: '⚔️', color: '#d9534f', weight: 62, desc: 'Oleadas de enemigos. Ganás experiencia.' },
       // combate más duro: oleadas 50% más grandes, pero al terminar aparece un cofre
-      ambush: { name: 'Emboscada', icon: '🗡️', color: '#e07a2a', weight: 24, minFloor: 1, sizeMult: 1.5, desc: 'Muchos más enemigos... y un cofre al final.' },
+      // emboscada: por fuera es una puerta de COMBATE más (no se sabe cuál de las dos es)
+      ambush: { name: 'Emboscada', icon: '🗡️', color: '#e07a2a', looksLike: 'combat', minFloor: 1, sizeMult: 1.5, chance: 0.3, desc: 'Muchos más enemigos... y un cofre al final.' },
       elite: { name: 'Élite', icon: '💀', color: '#b04ad9', weight: 9, minFloor: 2, maxPerRealm: 2, desc: 'Un Ojo del Sol de Medianoche. Recompensa: una reliquia.' },
       shop: { name: 'Tienda', icon: '🛒', color: '#e0b84a', weight: 11, minFloor: 1, maxPerRealm: 1, desc: 'Gastá tus yules.' },
       event: { name: 'Evento', icon: '❓', color: '#4aa3d9', weight: 10, minFloor: 1, maxPerRealm: 2, desc: 'Algo inesperado...' },

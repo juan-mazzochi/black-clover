@@ -107,7 +107,11 @@ Además de los que persiguen y disparan, hay enemigos que obligan a jugar distin
 
 Se desbloquea al ganar el juego una vez: aparece una casilla **♾ Modo infinito** al elegir personaje. Después de vencer al último jefe los 5 reinos vuelven a empezar (un **ciclo** nuevo) y te curás la mitad de la vida. Cada ciclo arranca tan difícil como el final del anterior y sigue subiendo: más vida, más daño, enemigos más rápidos, oleadas más grandes y balas más veloces. Hacia el ciclo 4 o 5 es casi imposible. Se guarda tu récord y cada ciclo completado da 20 ⭐ extra. Los números están en `endless` dentro de `js/data.js`.
 
-**Puertas:** al terminar una sala nunca hay dos opciones iguales. Las puertas aparecen arriba, a la izquierda o a la derecha (siempre en el centro de esa pared), y el lugar cambia de sala en sala. Hay un tipo de sala nuevo, **🗡 Emboscada**: muchos más enemigos, pero al final aparece un cofre.
+**Puertas:** al terminar una sala nunca hay dos opciones iguales. Las puertas aparecen arriba, a la izquierda o a la derecha (siempre en el centro de esa pared), y el lugar cambia de sala en sala. A veces aparecen **dos puertas de Combate**: una es normal y la otra es una **🗡 Emboscada** disfrazada (muchos más enemigos, pero al final aparece un cofre). No hay forma de saber cuál es cuál hasta entrar.
+
+**Definitivas:** la carga que da el daño que hacés tiene un tope por segundo (`maxDamageGainPerSec` en `js/data.js`), así que con mucho daño o muchos enemigos la barra ya no se llena volando (le pasaba sobre todo a Asta).
+
+**Celular:** la pantalla completa se activa sola con el primer toque y otra vez al empezar cada partida. En iPhone no existe esa opción del navegador: hay que usar "Agregar a pantalla de inicio".
 
 **Transformaciones:** con la definitiva activa cada personaje cambia de aspecto (Asta con cuernos y ala de demonio, Yuno con alas de viento, Noelle con la armadura Valquiria, el Caballero Novato en dorado). Los jefes también cambian en cada fase y tienen un aura que late.
 

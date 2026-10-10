@@ -144,7 +144,7 @@
     const g = this.game;
     const L = this.lctx;
     for (const dr of g.room.doors) {
-      const rd = g.data.rooms[dr.node.type];
+      const rd = g.data.rooms[g.data.rooms[dr.node.type].looksLike || dr.node.type];
       const x = q(dr.x - dr.w / 2);
       const y = q(dr.y - dr.h / 2);
       const w = q(dr.w);
@@ -161,7 +161,7 @@
         L.fillStyle = P.shade(rd.color, 0.4);
         L.fillRect(x, y, w, 1);
       }
-      const ic = P.icon(ROOM_ICON[dr.node.type] || 'event');
+      const ic = P.icon(ROOM_ICON[g.data.rooms[dr.node.type].looksLike || dr.node.type] || 'event');
       if (ic) P.blit(L, ic, x + Math.round((w - P.dw(ic)) / 2), y + Math.round((h - P.dh(ic)) / 2));
     }
   };
@@ -170,7 +170,7 @@
     const g = this.game;
     const T = BC.RenderUtil.text;
     for (const dr of g.room.doors) {
-      const rd = g.data.rooms[dr.node.type];
+      const rd = g.data.rooms[g.data.rooms[dr.node.type].looksLike || dr.node.type];
       const label = dr.nextRealm ? '→ ' + g.data.realms[dr.node.realm].name : rd.name;
       T(this.ctx, label, dr.x, dr.y + dr.h / 2 + 14, 14, '#fff', 'center', 'bold', true);
     }
